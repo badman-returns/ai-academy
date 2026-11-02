@@ -18,6 +18,7 @@ Exported from the academy on 2026-11-02.
 | 2.1 | Message roles and the stateless API | 1 of 3 | no |
 | 2.2 | System prompts and few-shot examples | 1 of 3 | no |
 | 2.3 | Chain of thought: reason before you answer | 1 of 3 | no |
+| 2.4 | JSON output: validate and retry | 1 of 3 | no |
 
 ## Mastery
 
@@ -105,6 +106,13 @@ Exported from the academy on 2026-11-02.
 | The cost of the reasoning: output tokens and time | 0 (Not started) |  |
 | The reasoning text is not a reliable record of how the model decided | 0 (Not started) |  |
 | When the mode is worth its cost: compare both modes on a sample set | 0 (Not started) |  |
+| Code needs a fixed shape: a prompt that asks for JSON usually works, but not always | 0 (Not started) |  |
+| The failure kinds: text around the JSON, a missing field, a wrong type, a value outside the enum, a cut-off reply | 0 (Not started) |  |
+| One Pydantic model as the one source: model_json_schema for the prompt, model_validate_json for the check | 0 (Not started) |  |
+| Strict mode and extra="forbid": reject values that lax mode would convert | 0 (Not started) |  |
+| The retry loop: the reply and the errors go back as two more turns, with a fixed limit | 0 (Not started) |  |
+| Check stop_reason before you validate: do not retry a reply that stopped at max_tokens or a refusal | 0 (Not started) |  |
+| What retries cost: each retry sends the full history again, so measure the retry rate | 0 (Not started) |  |
 
 ## Tickets
 
@@ -122,6 +130,7 @@ Exported from the academy on 2026-11-02.
 | T-010 | not started |  |  |
 | T-011 | not started |  |  |
 | T-012 | not started |  |  |
+| T-013 | not started |  |  |
 
 ## Review
 

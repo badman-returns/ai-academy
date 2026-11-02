@@ -987,5 +987,87 @@ test("lesson 2.3 is ready, covers t2-system and links ticket T-012", () => {
   if (!ids.includes('"l2-3-cot"')) throw new Error("the lesson does not place the interactive");
 });
 
+/* Lesson 2.4: the validator and retry interactive, the lesson numbers and ticket T-013 */
+const vr = (A.ix || {})["l2-4-validate"];
+const runRetry = (o) => vr.run(Object.assign({ text: vr.OUTPUTS[2].text, stop: "end_turn", behavior: 0, maxRetries: 2, model: 2 }, o));
+const firstError = (t) => { const v = vr.validate(t); return v.ok ? "valid" : v.errors[0].type; };
+test("validator toy: each sample reply gives the error type of Pydantic 2 strict mode", () => {
+  eq(vr.OUTPUTS.map((o) => [o.id, firstError(o.text)]),
+    [["valid", "valid"], ["prose", "json_invalid"], ["missing", "missing"], ["type", "bool_type"], ["enum", "literal_error"], ["cut", "json_invalid"]]);
+  eq(vr.validate(vr.OUTPUTS[2].text).errors[0], { type: "missing", loc: ["needs_human"], msg: "Field required" });
+});
+test("validator toy: strict mode rejects a string for a boolean, a label in the wrong case and extra keys", () => {
+  ["\"true\"", "\"yes\"", "1"].forEach((x) => eq(firstError(vr.VALID.replace("false}", x + "}")), "bool_type", x));
+  eq(firstError(vr.VALID.replace("\"IT\"", "\"it\"")), "literal_error");
+  eq(firstError(vr.VALID.replace("\"medium\"", "2")), "literal_error");
+  eq(firstError(vr.VALID.replace("}", ", \"confidence\": 0.9}")), "extra_forbidden");
+  eq(firstError(vr.VALID.replace("Laptop does not start after the update.", "")), "string_too_short");
+});
+test("ticket T-013: the schema values are the category and priority labels of ticket T-011", () => {
+  const t11 = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-011.md"), "utf8");
+  const cat = t11.match(/^category: <one of (.+)>$/m), pri = t11.match(/^priority: <one of (.+)>$/m);
+  if (!cat || !pri) throw new Error("format lines not found in T-011.md");
+  const vals = (m) => m[1].split(/, /).map((x) => "'" + x + "'");
+  const lit = (f) => vr.validate(vr.VALID.replace(f === "category" ? "\"IT\"" : "\"medium\"", "\"x\"")).errors[0].msg;
+  eq(lit("category"), "Input should be " + vals(cat).slice(0, -1).join(", ") + " or " + vals(cat).slice(-1)[0]);
+  eq(lit("priority"), "Input should be " + vals(pri).slice(0, -1).join(", ") + " or " + vals(pri).slice(-1)[0]);
+  const t13 = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-013.md"), "utf8");
+  ["Literal[\"" + cat[1].split(", ").join("\", \"") + "\"]", "Literal[\"" + pri[1].split(", ").join("\", \"") + "\"]",
+   "scripts/triage_eval.py --modes json", "--mode json", "check_answer", "LABEL_FORMAT", "RULES"].forEach((x) => { if (!t13.includes(x)) throw new Error("T-013 misses: " + x); });
+  if (/run_samples/.test(t13)) throw new Error("T-013 names a script that T-011 does not have");
+});
+test("validator toy: the retry message names each field and uses \"reply\" for invalid JSON", () => {
+  eq(vr.retryMessage(vr.validate(vr.OUTPUTS[2].text).errors),
+    "Your last reply did not match the schema.\n- needs_human: Field required\nReply again with only the JSON object. Do not add text before or after it.");
+  if (!/^- reply: Invalid JSON: expected value at line 1 column 1$/m.test(vr.retryMessage(vr.validate(vr.OUTPUTS[1].text).errors))) throw new Error("no reply line");
+});
+test("retry toy: the interactive uses the price table of app.js", () => {
+  eq(runRetry({}).model, L.MODELS[2]);
+  eq(runRetry({ model: 0 }).model, L.MODELS[0]);
+});
+test("retry toy: success on the first retry makes 2 calls and costs $0.000221 on Haiku 5.5 (2.10 times one call)", () => {
+  const r = runRetry({});
+  eq([r.status, r.calls, r.retries, r.inputTokens], ["valid", 2, 1, 1710]);
+  eq(r.attempts.map((a) => a.inputTokens), [800, 910]);
+  near(r.oneCall, 0.000105, 1e-12, "one call");
+  near(r.cost, 0.000221, 1e-12, "total (ticket T-013 criterion 6)");
+  eq(Math.round(r.ratio * 100) / 100, 2.1);
+});
+test("retry toy: the loop stops after the last retry (3 calls, $0.000348 on Haiku 5.5, $0.01392 on Opus 5.5)", () => {
+  const r = runRetry({ behavior: 2 });
+  eq([r.status, r.calls, r.retries], ["failed", 3, 2]);
+  eq(r.attempts.map((a) => a.inputTokens), [800, 910, 1020]);
+  near(r.cost, 0.000348, 1e-12, "Haiku");
+  near(runRetry({ behavior: 2, model: 0 }).cost, 0.01392, 1e-12, "Opus");
+  eq(runRetry({ behavior: 2, maxRetries: 0 }).calls, 1, "limit 0");
+  eq(runRetry({ behavior: 2, maxRetries: 3 }).calls, 4, "limit 3");
+});
+test("retry toy: a reply cut off at max_tokens is not retried", () => {
+  const r = runRetry({ text: vr.OUTPUTS[5].text, stop: "max_tokens", behavior: 2 });
+  eq([r.status, r.calls, r.retries], ["cut_off", 1, 0]);
+});
+test("retry toy: each retry has more input tokens than the call before it, for every model and limit", () => {
+  [0, 1, 2].forEach((m) => [0, 1, 2, 3].forEach((mx) => {
+    const a = runRetry({ behavior: 2, model: m, maxRetries: mx }).attempts;
+    for (let i = 1; i < a.length; i++) if (!(a[i].inputTokens > a[i - 1].inputTokens && a[i].cost > a[i - 1].cost)) throw new Error("model " + m + " limit " + mx + " call " + (i + 1));
+  }));
+});
+test("lesson 2.4 numbers: the made-up month costs $11.207, or $11.08 with a retry limit of 1, compared to $10.50", () => {
+  const one = runRetry({ text: vr.VALID }).cost, two = runRetry({}).cost, three = runRetry({ behavior: 2 }).cost;
+  near(100000 * one, 10.5, 1e-9, "no retries");
+  near(95000 * one + 4000 * two + 1000 * three, 11.207, 1e-9, "limit 2");
+  near(95000 * one + 4000 * two + 1000 * two, 11.08, 1e-9, "limit 1");
+  near(60 * L.cost(L.MODELS[2], 1500, 100).total, 0.012, 1e-12, "T-013 milestone 4 cap");
+});
+test("ticket T-013: the fixture replies parse as JSON and give their expected error types", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-013.md"), "utf8");
+  const m = md.match(/\n(\[\n  \{"id": "valid"[\s\S]*?\n\])\n/);
+  if (!m) throw new Error("fixture JSON not found in T-013.md");
+  const fx = JSON.parse(m[1]);
+  eq(fx.length, 9);
+  fx.forEach((c) => eq(firstError(c.reply), c.expect, c.id));
+  ["retries=1 valid=yes", "test_max_tokens_stop_is_not_retried", "pydantic>=2,<3"].forEach((s) => { if (!md.includes(s)) throw new Error("missing: " + s); });
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
