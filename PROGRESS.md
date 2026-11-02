@@ -19,6 +19,7 @@ Exported from the academy on 2026-11-02.
 | 2.2 | System prompts and few-shot examples | 1 of 3 | no |
 | 2.3 | Chain of thought: reason before you answer | 1 of 3 | no |
 | 2.4 | JSON output: validate and retry | 1 of 3 | no |
+| 2.5 | Tool schemas and schema-enforced output | 1 of 3 | no |
 
 ## Mastery
 
@@ -113,6 +114,13 @@ Exported from the academy on 2026-11-02.
 | The retry loop: the reply and the errors go back as two more turns, with a fixed limit | 0 (Not started) |  |
 | Check stop_reason before you validate: do not retry a reply that stopped at max_tokens or a refusal | 0 (Not started) |  |
 | What retries cost: each retry sends the full history again, so measure the retry rate | 0 (Not started) |  |
+| A tool definition: name, description, input_schema, and a tool_use block in the response | 0 (Not started) |  |
+| One source for the schema: build the tool from the Pydantic model with one function | 0 (Not started) |  |
+| Strict tool use: "strict": true makes the tool input follow input_schema | 0 (Not started) |  |
+| tool_choice: auto, any, tool and none, and which models accept a forced tool | 0 (Not started) |  |
+| Structured outputs: output_config.format and messages.parse | 0 (Not started) |  |
+| How enforcement works: grammar-constrained sampling and its limits | 0 (Not started) |  |
+| What enforcement cannot fix: wrong values, refusal, max_tokens, no tool call | 0 (Not started) |  |
 
 ## Tickets
 
@@ -131,6 +139,7 @@ Exported from the academy on 2026-11-02.
 | T-011 | not started |  |  |
 | T-012 | not started |  |  |
 | T-013 | not started |  |  |
+| T-014 | not started |  |  |
 
 ## Review
 

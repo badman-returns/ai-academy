@@ -68,7 +68,7 @@ window.ACADEMY.curriculum = [
       { id: "2.2", title: "System prompts and few-shot examples", status: "ready", covers: ["t2-system"] },
       { id: "2.3", title: "Chain of thought: reason before you answer", status: "ready", covers: ["t2-system"] },
       { id: "2.4", title: "JSON output: validate and retry", status: "ready", covers: ["t2-structured"] },
-      { id: "2.5", title: "Tool schemas and schema-enforced output", status: "planned", covers: ["t2-structured"] },
+      { id: "2.5", title: "Tool schemas and schema-enforced output", status: "ready", covers: ["t2-structured"] },
       { id: "2.6", title: "Prompt caching", status: "planned", covers: ["t2-caching"] },
       { id: "2.7", title: "Prompt versioning and prompt tests", status: "planned", covers: ["t2-versioning"] }
     ],

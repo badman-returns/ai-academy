@@ -1069,5 +1069,126 @@ test("ticket T-013: the fixture replies parse as JSON and give their expected er
   ["retries=1 valid=yes", "test_max_tokens_stop_is_not_retried", "pydantic>=2,<3"].forEach((s) => { if (!md.includes(s)) throw new Error("missing: " + s); });
 });
 
+/* Lesson 2.5: the schema to tool interactive and the lesson numbers */
+const sch = (A.ix || {})["l2-5-schema"];
+const runSchema = (o) => sch.compute(Object.assign({}, o));
+const schemaObjects = (s) => [s].concat(Object.values(s.$defs || {})).filter((o) => o.type === "object");
+test("schema toy: the interactive uses the price table of app.js", () => {
+  eq(runSchema({}).model, L.MODELS[0]);
+  eq(runSchema({ model: 2 }).model, L.MODELS[2]);
+});
+test("schema toy: the default tool is strict, has a valid name and forbids extra fields", () => {
+  const r = runSchema({});
+  eq(r.tool.strict, true);
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(r.tool.name)) throw new Error("tool name does not match the regex: " + r.tool.name);
+  schemaObjects(r.tool.input_schema).forEach((o) => eq(o.additionalProperties, false, "additionalProperties"));
+  eq(r.problems, []);
+});
+test("schema toy: the schema required list and enums come from the field list (one source)", () => {
+  const r = runSchema({});
+  eq(r.schema.required, sch.TRIAGE_FIELDS.filter((f) => f.required).map((f) => f.name));
+  eq(r.schema.properties.category.enum, ["IT", "HR", "facilities", "finance", "other"]);
+  eq(r.tool.input_schema, r.schema);
+});
+test("schema toy: the tool request uses tool_choice auto and the system prompt names the tool", () => {
+  const req = runSchema({}).request;
+  eq(req.tool_choice, { type: "auto" });
+  eq(req.tools.length, 1);
+  if (!req.system.includes("record_triage")) throw new Error("the system prompt does not name the tool");
+  eq("output_config" in req, false);
+});
+test("schema toy: the structured outputs request has output_config.format and no tools", () => {
+  const r = runSchema({ method: "output" });
+  eq(r.request.output_config.format.type, "json_schema");
+  eq(r.request.output_config.format.schema, r.schema);
+  eq(["tools" in r.request, "tool_choice" in r.request], [false, false]);
+  eq([r.status.http, r.status.systemTokens], [200, null]);
+});
+test("schema toy: a forced tool gives error 400 on Opus 5.5 and Sonnet 5.5, and 406 system tokens on Haiku 5.5", () => {
+  eq(runSchema({ forced: true, model: 0 }).status.http, 400);
+  eq(runSchema({ forced: true, model: 1 }).status.http, 400);
+  eq(runSchema({ forced: true, model: 0 }).response, null);
+  const h = runSchema({ forced: true, model: 2 });
+  eq([h.status.http, h.status.systemTokens, h.request.tool_choice], [200, 406, { type: "tool", name: "record_triage" }]);
+  eq(h.response.content.map((b) => b.type), ["tool_use"]);
+});
+test("schema toy: tool_choice auto adds 286 system tokens on every model ($1.144 per 1,000 requests on Opus 5.5)", () => {
+  [0, 1, 2].forEach((m) => eq(runSchema({ model: m }).status.systemTokens, 286, "model " + m));
+  near(runSchema({ model: 0 }).systemCostPer1000, 1.144, 1e-9, "Opus 5.5");
+  near(runSchema({ model: 2 }).systemCostPer1000, 0.0286, 1e-9, "Haiku 5.5");
+});
+test("schema toy: with auto, a text block comes before the tool_use block, so code must find the block by type", () => {
+  const c = runSchema({}).response.content;
+  eq(c.map((b) => b.type), ["text", "tool_use"]);
+  eq(c.find((b) => b.type === "tool_use").name, "record_triage");
+});
+test("schema toy: the enforced sample is valid, and the prompt-only sample has a missing field, a wrong enum case and a string boolean", () => {
+  eq(runSchema({}).errors, []);
+  const p = runSchema({ sample: "prompt" });
+  eq(p.errors.map((e) => e.field).sort(), ["category", "needs_human", "summary"]);
+  eq([p.input.category, p.input.needs_human, "summary" in p.input], ["it", "no", false]);
+});
+test("schema toy: an added integer field is sent as a string in the prompt-only sample and is caught", () => {
+  const fields = sch.TRIAGE_FIELDS.concat([{ name: "minutes", type: "integer", values: [], required: true }]);
+  const p = runSchema({ fields, sample: "prompt" });
+  eq(typeof p.input.minutes, "string");
+  if (!p.errors.some((e) => e.field === "minutes")) throw new Error("the string integer is not caught");
+  eq(runSchema({ fields }).errors, []);
+});
+test("schema toy: a tool name with a space breaks the name rule, gives error 400 and costs no tool tokens", () => {
+  const r = runSchema({ toolName: "record triage" });
+  if (!r.problems.length) throw new Error("no problem reported");
+  eq([r.status.http, r.status.systemTokens, r.systemCostPer1000, r.response], [400, null, 0, null]);
+});
+test("schema toy: validate rejects a field that is not in the schema", () => {
+  const r = runSchema({});
+  eq(sch.validate(r.schema, Object.assign({ extra: 1 }, r.input)), [{ field: "extra", error: "field is not in the schema" }]);
+});
+test("lesson 2.5 numbers: the enforced request costs $0.005744 and the prompt-only request $0.0046 on Opus 5.5", () => {
+  near(L.cost(L.MODELS[0], 700, 90).total, 0.0046, 1e-12, "prompt-only");
+  near(L.cost(L.MODELS[0], 700 + 286, 90).total, 0.005744, 1e-12, "enforced (ticket T-014 criterion 7)");
+  near((L.cost(L.MODELS[0], 986, 90).total - L.cost(L.MODELS[0], 700, 90).total) * 1000, 1.144, 1e-9, "per 1,000");
+});
+test("lesson 2.5 numbers: the break-even retry share is about 21%", () => {
+  const retry = L.cost(L.MODELS[0], 900, 90).total;
+  near(retry, 0.0054, 1e-12, "retry");
+  const share = (L.cost(L.MODELS[0], 986, 90).total - L.cost(L.MODELS[0], 700, 90).total) / retry;
+  eq(Math.round(share * 100), 21);
+});
+test("lesson 2.5 numbers: the Haiku 5.5 faded step gives about $0.029 per 1,000 requests", () => {
+  near(L.cost(L.MODELS[2], 700, 90).total, 0.000115, 1e-12);
+  near(L.cost(L.MODELS[2], 986, 90).total, 0.0001436, 1e-12);
+  near((L.cost(L.MODELS[2], 986, 90).total - L.cost(L.MODELS[2], 700, 90).total) * 1000, 0.0286, 1e-9);
+});
+test("lesson 2.5 numbers: the milestone 4 cost estimate is about $0.007 for 40 calls and $0.021 for 120 calls", () => {
+  near(40 * L.cost(L.MODELS[2], 1000, 150).total, 0.007, 1e-12);
+  near(120 * L.cost(L.MODELS[2], 1000, 150).total, 0.021, 1e-12);
+});
+test("lesson 2.5 numbers: the T-014 Markdown contains the tests, the fixture and the acceptance numbers", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-014.md"), "utf8");
+  ["schema_tool.py", "triage_eval.py --modes json,tool", "mode=tool answer=ok retries=0 valid=yes", "tool_result", "0.005744", "test_request_never_forces_the_tool", "test_every_object_in_the_schema_forbids_extra_fields", "additionalProperties"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+  const m = A.tickets["T-014"].fields.files.match(/as a small object:<\/p>\s*<pre><code>([\s\S]*?)<\/code><\/pre>/);
+  if (!m) throw new Error("fixture block not found in the files field");
+  const block = JSON.parse(m[1]);
+  eq([block.type, block.name], ["tool_use", "record_triage"]);
+  eq(sch.validate(runSchema({}).schema, block.input), []);
+});
+test("lesson 2.5 content: the interactive and the T-014 example use the category and priority values of T-013", () => {
+  const t13 = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-013.md"), "utf8");
+  const lit = (field) => JSON.parse("[" + t13.match(new RegExp("`" + field + "` \\(`Literal\\[([^\\]]+)\\]"))[1] + "]");
+  const r = runSchema({});
+  eq(r.schema.properties.category.enum, lit("category"));
+  eq(r.schema.properties.priority.enum, lit("priority"));
+  const m = A.tickets["T-014"].fields.files.match(/as a small object:<\/p>\s*<pre><code>([\s\S]*?)<\/code><\/pre>/);
+  const input = JSON.parse(m[1]).input;
+  if (!lit("priority").includes(input.priority)) throw new Error("T-014 example priority " + input.priority);
+});
+test("lesson 2.5 content: the T-014 requirements use tool_choice auto and forbid any and tool", () => {
+  const req = A.tickets["T-014"].fields.requirements;
+  if (!req.includes('tool_choice={"type": "auto"}')) throw new Error("the request rule does not name tool_choice auto");
+  if (!/Never send <code>\{"type": "any"\}<\/code> or <code>\{"type": "tool"\}<\/code>/.test(req)) throw new Error("the rule does not forbid any and tool");
+  eq(A.lessons["2.5"].tickets, ["T-014"]);
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
