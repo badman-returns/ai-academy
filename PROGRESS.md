@@ -20,6 +20,7 @@ Exported from the academy on 2026-11-02.
 | 2.3 | Chain of thought: reason before you answer | 1 of 3 | no |
 | 2.4 | JSON output: validate and retry | 1 of 3 | no |
 | 2.5 | Tool schemas and schema-enforced output | 1 of 3 | no |
+| 2.6 | Prompt caching | 1 of 3 | no |
 
 ## Mastery
 
@@ -121,6 +122,13 @@ Exported from the academy on 2026-11-02.
 | Structured outputs: output_config.format and messages.parse | 0 (Not started) |  |
 | How enforcement works: grammar-constrained sampling and its limits | 0 (Not started) |  |
 | What enforcement cannot fix: wrong values, refusal, max_tokens, no tool call | 0 (Not started) |  |
+| The cached prefix: tools, then system, then messages, up to the cache breakpoint | 0 (Not started) |  |
+| An exact match: one changed byte before the breakpoint gives a cache miss | 0 (Not started) |  |
+| The usage fields: cache_creation_input_tokens, cache_read_input_tokens and input_tokens | 0 (Not started) |  |
+| Cache prices: a write costs 1.25 or 2 times the input price, a read 0.05 or 0.1 times | 0 (Not started) |  |
+| The rules: at least 512 tokens, at most 4 breakpoints, a lifetime of 5 minutes or 1 hour | 0 (Not started) |  |
+| Automatic caching for a chat: the breakpoint moves forward with the history | 0 (Not started) |  |
+| What the cache keeps: the keys and values of the prefix, so the time to first token can go down | 0 (Not started) |  |
 
 ## Tickets
 
@@ -140,6 +148,7 @@ Exported from the academy on 2026-11-02.
 | T-012 | not started |  |  |
 | T-013 | not started |  |  |
 | T-014 | not started |  |  |
+| T-015 | not started |  |  |
 
 ## Review
 

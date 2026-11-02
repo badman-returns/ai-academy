@@ -1190,5 +1190,143 @@ test("lesson 2.5 content: the T-014 requirements use tool_choice auto and forbid
   eq(A.lessons["2.5"].tickets, ["T-014"]);
 });
 
+/* Lesson 2.6: the cache prefix simulator, the lesson numbers and ticket T-015 */
+const cch = (A.ix || {})["l2-6-cache"];
+const runCache = (o) => cch.compute(Object.assign({ model: 0, breakpoint: 3, change: 4, gap: 0, longTtl: false }, o));
+test("cache toy: the interactive uses the price table of app.js", () => {
+  eq(runCache({}).model, L.MODELS[0]);
+  eq(runCache({ model: 2 }).model, L.MODELS[2]);
+});
+test("cache toy: with the breakpoint after the examples, call 1 writes 4,400 tokens ($0.0294) and call 2 reads them ($0.00828)", () => {
+  const r = runCache({});
+  eq([r.call1.usage, r.call2.usage], [{ input_tokens: 1100, cache_creation_input_tokens: 4400, cache_read_input_tokens: 0 },
+    { input_tokens: 1100, cache_creation_input_tokens: 0, cache_read_input_tokens: 4400 }]);
+  near(r.call1.cost, 0.0294, 1e-12, "call 1");
+  near(r.call2.cost, 0.00828, 1e-12, "call 2");
+  near(r.noCache.cost, 0.025, 1e-12, "one call without the cache");
+  near(r.runs.cached, 0.18672, 1e-12, "20 calls with the cache");
+  near(r.runs.uncached, 0.5, 1e-12, "20 calls without the cache");
+});
+
+test("cache toy: input + cache write + cache read is the full prompt (5,500 tokens) in every case", () => {
+  [0, 1, 2].forEach((model) => [0, 1, 2, 3, 4, 5].forEach((breakpoint) => [0, 1, 2, 3, 4].forEach((change) => [0, 1, 2].forEach((gap) => [false, true].forEach((longTtl) => {
+    const r = runCache({ model, breakpoint, change, gap, longTtl });
+    [r.call1, r.call2].forEach((c) => eq(c.usage.input_tokens + c.usage.cache_creation_input_tokens + c.usage.cache_read_input_tokens, 5500));
+  })))));
+});
+test("cache toy: the cache never changes the output cost", () => {
+  [0, 1, 2].forEach((model) => [0, 3, 5].forEach((breakpoint) => {
+    const r = runCache({ model, breakpoint });
+    const out = L.cost(L.MODELS[model], 0, 150).output;
+    near(r.call1.parts.output, out, 1e-15, "call 1");
+    near(r.call2.parts.output, out, 1e-15, "call 2");
+  }));
+});
+test("cache toy: the cache multipliers reproduce the rows of the Pricing page", () => {
+  // Row: input, 5-minute write, 1-hour write, cache read, in USD per million tokens.
+  const t = (x) => Math.round(x * 1e6) / 1e6;
+  const row = (model) => { const r5 = runCache({ model }).rates, r1 = runCache({ model, longTtl: true }).rates;
+    return [r5.input, r5.write, r1.write, r5.read].map(t); };
+  eq(row(0), [4, 5, 8, 0.2]);
+  eq(row(1), [2, 2.5, 4, 0.1]);
+  eq(row(2), [0.1, 0.125, 0.2, 0.01]);
+  eq([cch.CACHE.minTokens, cch.CACHE.ttl5m, cch.CACHE.ttl1h], [512, 5, 60]);
+});
+test("cache toy: a timestamp in the system prompt makes every call a write ($0.0294 each, $0.588 for 20 calls)", () => {
+  const r = runCache({ change: 1 });
+  eq([r.hit, r.reason], [false, "prefix_changed"]);
+  eq(r.call2.usage, { input_tokens: 1100, cache_creation_input_tokens: 4400, cache_read_input_tokens: 0 });
+  near(r.call2.cost, 0.0294, 1e-12);
+  near(r.runs.cached, 0.588, 1e-12);
+  if (!(r.runs.cached > r.runs.uncached)) throw new Error("a prefix that changes must cost more than no cache");
+});
+test("cache toy: a breakpoint after the new message never reads ($0.0305 a call, $0.61 for 20 calls)", () => {
+  const r = runCache({ breakpoint: 5 });
+  eq([r.hit, r.reason, r.call2.usage.cache_read_input_tokens], [false, "prefix_changed", 0]);
+  near(r.call2.cost, 0.0305, 1e-12);
+  near(r.runs.cached, 0.61, 1e-12);
+});
+test("cache toy: a prefix below 512 tokens is not cached and gives no error", () => {
+  const r = runCache({ breakpoint: 1 });
+  eq([r.prefix, r.belowMin, r.cacheOn, r.reason], [400, true, false, "below_minimum"]);
+  eq(r.call1.usage, { input_tokens: 5500, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 });
+  near(r.call1.cost, r.noCache.cost, 1e-15);
+});
+test("cache toy: no breakpoint costs the same as no cache", () => {
+  const r = runCache({ breakpoint: 0 });
+  eq(r.reason, "no_breakpoint");
+  near(r.runs.cached, r.runs.uncached, 1e-15);
+});
+test("cache toy: a 10-minute gap expires the 5-minute entry, and the 1-hour lifetime keeps it ($0.0426 write, $0.19992 for 20 calls)", () => {
+  eq([runCache({ gap: 1 }).hit, runCache({ gap: 1 }).reason], [false, "expired"]);
+  const h = runCache({ gap: 1, longTtl: true });
+  eq([h.hit, h.reason], [true, "hit"]);
+  near(h.call1.cost, 0.0426, 1e-12, "1-hour write");
+  near(h.call2.cost, 0.00828, 1e-12, "read");
+  near(h.runs.cached, 0.19992, 1e-12, "20 calls");
+  eq(runCache({ gap: 2, longTtl: true }).reason, "expired");
+});
+test("cache toy: an edit of an earlier turn keeps the cache when the breakpoint is before the history", () => {
+  eq(runCache({ change: 3, breakpoint: 3 }).hit, true);
+  eq(runCache({ change: 3, breakpoint: 4 }).reason, "prefix_changed");
+});
+test("cache toy: a cache read skips the keys and values of the prefix (call 2 computes 1,100 of 5,500 tokens)", () => {
+  const r = runCache({});
+  eq([r.call1.computed, r.call2.computed, r.noCache.computed], [5500, 1100, 5500]);
+});
+test("cache toy: the default saving on 20 calls is 63%", () => {
+  eq(Math.round(runCache({}).runs.saving * 100), 63);
+});
+test("lesson 2.6 numbers: one read repays a 5-minute write, and a 1-hour write needs two reads (Opus 5.5)", () => {
+  const p = 4400, m = L.MODELS[0];
+  near(p * (m.in * 1.25 - m.in) / 1e6, 0.0044, 1e-12, "5-minute extra");
+  near(p * (m.in - m.in * 0.05) / 1e6, 0.01672, 1e-12, "saving of one read");
+  near(p * (m.in * 2 - m.in) / 1e6, 0.0176, 1e-12, "1-hour extra");
+  eq(Math.ceil(0.0176 / 0.01672), 2);
+});
+test("lesson 2.6 numbers: the Haiku 5.5 worked example gives $0.0035 without and $0.0019835 with the cache (43% less)", () => {
+  const m = L.MODELS[2];
+  const c = (inp, w, r) => (inp * m.in + w * m.in * 1.25 + r * m.in * 0.1 + 150 * m.out) / 1e6;
+  near(c(1000, 0, 0), 0.000175, 1e-15, "no cache");
+  near(c(100, 900, 0), 0.0001975, 1e-15, "call 1 (ticket T-015 criterion 2)");
+  near(c(100, 0, 900), 0.000094, 1e-15, "later call (ticket T-015 criterion 2)");
+  const cached = c(100, 900, 0) + 19 * c(100, 0, 900);
+  near(cached, 0.0019835, 1e-15, "20 calls");
+  eq(Math.round((1 - cached / (20 * c(1000, 0, 0))) * 100), 43);
+  const inputOnly = (100 * 0.1 + 900 * 0.125) / 1e6 + 19 * (100 * 0.1 + 900 * 0.01) / 1e6;
+  near(inputOnly, 0.0004835, 1e-15, "input part");
+  eq(Math.round((1 - inputOnly / 0.002) * 100), 76);
+});
+test("lesson 2.6 numbers: the T-015 Opus criteria match the simulator (0.0294, 0.00828, 0.0426) and T-001 stays 0.0108", () => {
+  const m = L.MODELS[0];
+  near((1100 * m.in + 4400 * m.in * 1.25 + 150 * m.out) / 1e6, runCache({}).call1.cost, 1e-12);
+  near((1100 * m.in + 4400 * m.in * 0.05 + 150 * m.out) / 1e6, runCache({}).call2.cost, 1e-12);
+  near((1100 * m.in + 4400 * m.in * 2 + 150 * m.out) / 1e6, runCache({ longTtl: true }).call1.cost, 1e-12);
+  near(L.cost(m, 1200, 300).total, 0.0108, 1e-12);
+});
+test("lesson 2.6 content: the price table in the lesson shows the checked cache prices", () => {
+  const html = A.lessons["2.6"].levels[1].blocks.map((b) => b.html || "").join("");
+  ["<td>$5</td><td>$8</td><td>$0.20</td>", "<td>$2.50</td><td>$4</td><td>$0.10</td>", "<td>$0.125</td><td>$0.20</td><td>$0.01</td>", "512 tokens", "at most 4 breakpoints"].forEach((s) => { if (!html.includes(s)) throw new Error("missing " + s); });
+});
+test("lesson 2.6 numbers: the T-015 Markdown contains the tests, the options and the acceptance numbers", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-015.md"), "utf8");
+  ["Project phase: 1", "caching.py", "triage_eval.py --modes tool --cache off,on", "cache_write=0 cache_read=900", "PYTHONHASHSEED", "0.0294", "0.00828", "0.0426", "0.0001975", "0.000094", "0.0108", "test_prefix_is_byte_identical_for_two_messages", "test_chat_never_exceeds_four_breakpoints", "claude-haiku-5-5"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+  if (!fs.existsSync(path.join(base, "..", "project", "handoffs", "T-015-handoff.md"))) throw new Error("no T-015 handoff template");
+});
+test("lesson 2.6 content: T-015 builds only on earlier tickets", () => {
+  const t = JSON.stringify(A.tickets["T-015"].fields);
+  const later = (t.match(/T-0\d\d/g) || []).filter((id) => id >= "T-015");
+  eq(later.filter((id) => id !== "T-015"), []);
+});
+test("lesson 2.6 content: the lesson and the interactive are registered and 2.6 is ready", () => {
+  const html = fs.readFileSync(path.join(base, "index.html"), "utf8");
+  const a = html.indexOf('src="content/lessons/15-prompt-caching.js"'), b = html.indexOf('src="content/lessons/15-ix.js"');
+  if (a < 0 || b < a) throw new Error("the 2.6 script tags are missing or in the wrong order");
+  eq(A.lessons["2.6"].tickets, ["T-015"]);
+  const all = A.curriculum.flatMap((t) => t.lessons);
+  eq(all.find((l) => l.id === "2.6").status, "ready");
+  if (!A.lessons["2.6"].levels.some((lv) => lv.blocks.some((bl) => bl.type === "interactive" && bl.id === "l2-6-cache"))) throw new Error("the lesson does not show the interactive");
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
