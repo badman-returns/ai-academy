@@ -162,7 +162,7 @@ test("the ticket Markdown has the title and numbered sections 2 to 12", () => {
   const md = A.md.ticket(A.tickets["T-001"]);
   if (!md.startsWith("# T-001: ")) throw new Error("bad title line");
   for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
-  if (/<[a-z]+[ >]/i.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+  if (/(^|[^\\])<[a-z]+[ >]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
 });
 test("the handoff template has all seven sections and the review prompt", () => {
   const md = A.md.handoffTemplate(A.tickets["T-001"]);
@@ -232,8 +232,27 @@ test("every ready lesson in curriculum.js has a lesson object with the same id",
     const md = A.md.ticket(t);
     if (!md.startsWith("# " + id + ": ")) throw new Error("bad title line");
     for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
-    if (/<[a-z]+[ >]/i.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+    if (/(^|[^\\])<[a-z]+[ >]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
   });
+});
+
+/* Angle brackets in ticket text. The content is HTML, so the source writes a literal < as &lt;. */
+const angleTicket = Object.assign({}, A.tickets["T-001"], { fields: Object.assign({}, A.tickets["T-001"].fields, {
+  objective: "<p>Call the API with <code>effort=&lt;value&gt;</code> and put each document in <code>&lt;source&gt;</code> tags.</p>",
+  requirements: "<ul><li>Replace &lt;value&gt; with low, medium or high.</li></ul>",
+  tests: "<pre><code>prompt = \"&lt;source&gt;\" + text + \"&lt;/source&gt;\"</code></pre>",
+  files: "<div class=\"table-wrap\"><table><tr><th>Flag</th><th>Value</th></tr><tr><td><code>--effort</code></td><td><code>&lt;value&gt;</code></td></tr></table></div>",
+  nfr: "<p>The text &lt;b&gt;not bold&lt;/b&gt; and &amp;lt;i&amp;gt; is escaped text, not HTML.</p>"
+}) });
+test("ticket text with angle brackets survives in generated Markdown (code spans, code blocks, tables and prose)", () => {
+  const md = A.md.ticket(angleTicket);
+  ["`effort=<value>`", "`<source>`", "- Replace \\<value> with", "prompt = \"<source>\" + text + \"</source>\"", "| `--effort` | `<value>` |"]
+    .forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+});
+test("escaped HTML in ticket text stays text in generated Markdown and never becomes a raw tag", () => {
+  const md = A.md.ticket(angleTicket);
+  if (!md.includes("The text \\<b>not bold\\</b> and")) throw new Error("escaped <b> text lost");
+  if (/(^|[^\\])<\/?[a-z]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("raw HTML tag outside code");
 });
 
 /* Lesson 1.5: the transformer block interactive and the lesson numbers */
@@ -373,7 +392,7 @@ test("ticket T-006 converts to Markdown with the title, sections 2 to 12 and no 
   const md = A.md.ticket(t);
   if (!md.startsWith("# T-006: ")) throw new Error("bad title line");
   for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
-  if (/<[a-z]+[ >]/i.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+  if (/(^|[^\\])<[a-z]+[ >]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
 });
 const nll = (p) => -Math.log(p);
 const sig = (x) => 1 / (1 + Math.exp(-x));

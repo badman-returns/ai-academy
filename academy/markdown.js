@@ -13,12 +13,20 @@
 (function (root) {
   root.ACADEMY = root.ACADEMY || { lessons: {}, tickets: {} };
 
-  /* Convert the small HTML subset that the content files use into Markdown. */
+  /*
+   * Convert the small HTML subset that the content files use into Markdown.
+   * The text stays escaped (&lt;) while the tags are converted and removed.
+   * finish() decodes the entities one time, at the end. Thus an escaped
+   * angle bracket is text, and a tag remover never sees it as a tag.
+   * CODE_START and CODE_END mark code text, which keeps literal brackets.
+   */
+  const CODE_START = "\u0001", CODE_END = "\u0002";
+
   function htmlToMd(html) {
     if (!html) return "";
     let s = String(html);
     s = s.replace(/<pre><code>([\s\S]*?)<\/code><\/pre>/g, function (_, code) {
-      return "\n```\n" + decode(code).replace(/^\n+|\s+$/g, "") + "\n```\n";
+      return "\n```\n" + CODE_START + code.replace(/^\n+|\s+$/g, "") + CODE_END + "\n```\n";
     });
     // Tables: one row per <tr>, cells split by |.
     s = s.replace(/<div class="table-wrap">|<\/div>/g, "");
@@ -44,25 +52,32 @@
     });
     s = s.replace(/<h3>([\s\S]*?)<\/h3>/g, function (_, h) { return "\n### " + inline(h) + "\n"; });
     s = s.replace(/<p[^>]*>([\s\S]*?)<\/p>/g, function (_, p) { return "\n" + inline(p).replace(/\s*\n\s*/g, " ").trim() + "\n"; });
-    s = inline(s);
+    s = finish(inline(s));
     // Remove the indentation that the HTML source leaves on empty lines.
     return s.replace(/^[ \t]+$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
   }
 
+  // Convert inline tags and remove all other tags. The text stays escaped.
   function inline(s) {
-    return decode(String(s)
+    return String(s)
       .replace(/<strong>([\s\S]*?)<\/strong>/g, "**$1**")
       .replace(/<em>([\s\S]*?)<\/em>/g, "*$1*")
-      .replace(/<code>([\s\S]*?)<\/code>/g, "`$1`")
+      .replace(/<code>([\s\S]*?)<\/code>/g, "`" + CODE_START + "$1" + CODE_END + "`")
       .replace(/<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g, "[$2]($1)")
       .replace(/<sub>([\s\S]*?)<\/sub>/g, "_$1")
       .replace(/<sup>([\s\S]*?)<\/sup>/g, "^$1")
       .replace(/<br\s*\/?>/g, "\n")
-      .replace(/<[^>]+>/g, ""));
+      .replace(/<[^>]+>/g, "");
   }
 
-  function decode(s) {
-    return s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+  // Decode the entities one time. Code text gets a literal "<". Other text
+  // gets "\<", so that a Markdown viewer shows "<" and does not read a tag.
+  function finish(s) {
+    return s.split(/\u0001([\s\S]*?)\u0002/).map(function (part, i) { return decode(part, i % 2 === 0); }).join("");
+  }
+
+  function decode(s, prose) {
+    return s.replace(/&lt;/g, prose ? "\\<" : "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;/g, "'").replace(/&amp;/g, "&");
   }
 
   const FIELDS = [
