@@ -1328,5 +1328,113 @@ test("lesson 2.6 content: the lesson and the interactive are registered and 2.6 
   if (!A.lessons["2.6"].levels.some((lv) => lv.blocks.some((bl) => bl.type === "interactive" && bl.id === "l2-6-cache"))) throw new Error("the lesson does not show the interactive");
 });
 
+/* Lesson 2.7: the prompt diff and regression interactive, the gate verdicts and the lesson numbers */
+const reg = (A.ix || {})["l2-7-regression"];
+const runReg = (o) => reg.compute(Object.assign({ cand: "A", bump: true, showAll: false }, o));
+const sha12 = (lines) => require("crypto").createHash("sha256").update(lines.join("\n"), "utf8").digest("hex").slice(0, 12);
+test("regression toy: the interactive l2-7-regression is loaded and runs on the Haiku 5.5 row of the app.js price table", () => {
+  if (!reg || typeof reg.mount !== "function") throw new Error("l2-7-regression is not loaded");
+  eq(runReg({}).run.model, L.MODELS[2]);
+  eq(runReg({}).base.model.id, "claude-haiku-5-5");
+});
+test("regression toy: every shown prompt hash is the first 12 hex characters of SHA-256 of the prompt lines", () => {
+  eq(reg.HASHES.base, sha12(reg.BASE_LINES), "baseline");
+  eq(reg.LOCK["triage-v3"], reg.HASHES.base, "lock file");
+  ["A", "B", "C", "D"].forEach((c) => {
+    const r = runReg({ cand: c });
+    eq(r.hash, sha12(r.lines), c);
+    eq(r.hash, reg.HASHES[c], c + " table");
+  });
+});
+test("regression toy: change A fixes m07 and m12, breaks nothing and ships with a new version", () => {
+  const r = runReg({ cand: "A" });
+  eq([r.run.correct, r.run.invalidFirst, r.fixed, r.broken, r.version, r.ship], [18, 1, ["m07", "m12"], [], "triage-v4", true]);
+});
+test("regression toy: change A with the old version name fails only the lock-file test and does not ship", () => {
+  const r = runReg({ cand: "A", bump: false });
+  eq(r.offline.filter((t) => !t.ok).map((t) => t.name), ["test_changed_text_has_a_new_version"]);
+  eq(r.ship, false);
+});
+test("regression toy: change B has a better total but breaks the must-pass case m20, so it does not ship", () => {
+  const r = runReg({ cand: "B" });
+  eq([r.run.correct, r.fixed, r.broken, r.brokenMust, r.ship], [17, ["m04", "m15"], ["m20"], ["m20"], false]);
+  if (r.run.correct <= r.base.correct) throw new Error("the total of B must be better than the baseline");
+});
+test("regression toy: change C fails only the date test and does not ship", () => {
+  const r = runReg({ cand: "C" });
+  eq(r.offline.filter((t) => !t.ok).map((t) => t.name), ["test_prompt_has_no_date_or_time"]);
+  eq([r.run.correct, r.ship], [16, false]);
+});
+test("regression toy: change D has 9 invalid first replies, 10 retries, 30 calls, m06 failed, and does not ship", () => {
+  const r = runReg({ cand: "D" });
+  eq([r.run.correct, r.run.invalidFirst, r.run.retries, r.run.calls, r.run.failed, r.broken, r.brokenMust, r.ship],
+    [15, 9, 10, 30, 1, ["m06"], [], false]);
+});
+test("regression toy: the run costs equal the app.js price table for the token totals", () => {
+  const h = L.MODELS[2];
+  const b = runReg({}).base;
+  eq([b.correct, b.invalidFirst, b.retries, b.calls, b.inTok, b.outTok], [16, 1, 1, 21, 13540, 1260]);
+  near(b.cost, L.cost(h, 13540, 1260).total, 1e-12, "baseline");
+  near(b.cost, 0.001984, 1e-12, "baseline");
+  const want = { A: [13876, 1260, 0.0020176], B: [13414, 1260, 0.0019714], C: [13687, 1260, 0.0019987], D: [20620, 1800, 0.002962] };
+  Object.keys(want).forEach((c) => {
+    const r = runReg({ cand: c }).run;
+    eq([r.inTok, r.outTok], want[c].slice(0, 2), c);
+    near(r.cost, L.cost(h, r.inTok, r.outTok).total, 1e-12, c);
+    near(r.cost, want[c][2], 1e-12, c);
+  });
+});
+test("lesson 2.7 numbers: the standard error at 80% is about 9 points for 20 messages and about 3 points for 200", () => {
+  const se = (n) => Math.sqrt(0.8 * 0.2 / n) * 100;
+  eq(Math.round(se(20)), 9);
+  near(1.96 * se(20), 17.5, 0.05);
+  eq(Math.round(se(200)), 3);
+  eq(100 / 20, 5);
+});
+test("lesson 2.7 numbers: the T-016 milestone 4 estimate is about $0.0105 for 60 calls and $0.0315 for 180 calls", () => {
+  near(60 * L.cost(L.MODELS[2], 1000, 150).total, 0.0105, 1e-12);
+  near(180 * L.cost(L.MODELS[2], 1000, 150).total, 0.0315, 1e-12);
+});
+test("ticket T-016 converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
+  const md = A.md.ticket(A.tickets["T-016"]);
+  if (!md.startsWith("# T-016: ")) throw new Error("bad title line");
+  for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
+  if (/(^|[^\\])<[a-z]+[ >]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+});
+test("lesson 2.7 numbers: the T-016 Markdown contains the files, the test names of the interactive and the gate numbers", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-016.md"), "utf8");
+  ["assistant/prompts.py", "assistant/gate.py", "scripts/prompt_gate.py", "prompts.lock.json", "triage_baseline.json",
+    "version: triage-v3", "prompt=triage-v3", "--update-baseline", "verdict: PASS", "no prompt change"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+  runReg({}).offline.forEach((t) => { if (!md.includes(t.name)) throw new Error("missing offline test " + t.name); });
+  const a = runReg({ cand: "A" }), b = runReg({ cand: "B" }), d = runReg({ cand: "D" });
+  [a.base.correct + " of 20 correct", a.run.correct + " of 20 correct", "m07 and m12 fixed",
+    b.run.correct + " of 20 correct that fixes m04 and m15 and breaks m20", d.run.correct + " of 20 correct and " + d.run.invalidFirst + " invalid first replies"]
+    .forEach((s) => { if (!md.includes(s)) throw new Error("the acceptance text does not match the interactive: " + s); });
+});
+test("lesson 2.7 content: the lesson table and the worked example use the numbers of the interactive", () => {
+  const html = JSON.stringify(A.lessons["2.7"].levels);
+  const d = runReg({ cand: "D" }), base0 = runReg({}).base;
+  ["<td>A. Add a finance rule</td><td>" + runReg({ cand: "A" }).run.correct + "</td>",
+    "<td>B. Shorten the priority rules</td><td>" + runReg({ cand: "B" }).run.correct + "</td>",
+    "<td>D. Add a confidence field</td><td>" + d.run.correct + "</td>",
+    d.run.calls + " calls in place of " + base0.calls, "$" + d.run.cost + " in place of $" + base0.cost]
+    .forEach((s) => { if (!html.includes(JSON.stringify(s).slice(1, -1))) throw new Error("missing " + s); });
+});
+test("lesson 2.7 wiring: index.html loads 16-prompt-versioning.js and 16-ix.js, and 2.7 is ready with ticket T-016", () => {
+  const html = fs.readFileSync(path.join(base, "index.html"), "utf8");
+  ["content/lessons/16-prompt-versioning.js", "content/lessons/16-ix.js"].forEach((s) => { if (!html.includes('src="' + s + '"')) throw new Error(s + " not loaded"); });
+  eq(A.lessons["2.7"].tickets, ["T-016"]);
+  eq(A.tickets["T-016"].lesson, "2.7");
+  const row = A.curriculum.flatMap((t) => t.lessons).find((l) => l.id === "2.7");
+  eq(row.status, "ready");
+  if (!JSON.stringify(A.lessons["2.7"].levels).includes('"id":"l2-7-regression"')) throw new Error("the interactive block is missing");
+});
+test("lesson 2.7 files never address a person by a title", () => {
+  ["16-prompt-versioning.js", "16-ix.js"].forEach((f) => {
+    const s = fs.readFileSync(path.join(base, "content", "lessons", f), "utf8");
+    if (/captain/i.test(s)) throw new Error(f + " contains a direct address");
+  });
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

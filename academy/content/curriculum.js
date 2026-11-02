@@ -70,7 +70,7 @@ window.ACADEMY.curriculum = [
       { id: "2.4", title: "JSON output: validate and retry", status: "ready", covers: ["t2-structured"] },
       { id: "2.5", title: "Tool schemas and schema-enforced output", status: "ready", covers: ["t2-structured"] },
       { id: "2.6", title: "Prompt caching", status: "ready", covers: ["t2-caching"] },
-      { id: "2.7", title: "Prompt versioning and prompt tests", status: "planned", covers: ["t2-versioning"] }
+      { id: "2.7", title: "Prompt versioning and prompt tests", status: "ready", covers: ["t2-versioning"] }
     ],
     resources: [
       { title: "How I use LLMs", by: "Andrej Karpathy", url: "https://www.youtube.com/watch?v=EWvNQjAaOHw" },

@@ -21,6 +21,7 @@ Exported from the academy on 2026-11-02.
 | 2.4 | JSON output: validate and retry | 1 of 3 | no |
 | 2.5 | Tool schemas and schema-enforced output | 1 of 3 | no |
 | 2.6 | Prompt caching | 1 of 3 | no |
+| 2.7 | Prompt versioning and prompt tests | 1 of 3 | no |
 
 ## Mastery
 
@@ -129,6 +130,13 @@ Exported from the academy on 2026-11-02.
 | The rules: at least 512 tokens, at most 4 breakpoints, a lifetime of 5 minutes or 1 hour | 0 (Not started) |  |
 | Automatic caching for a chat: the breakpoint moves forward with the history | 0 (Not started) |  |
 | What the cache keeps: the keys and values of the prefix, so the time to first token can go down | 0 (Not started) |  |
+| A prompt is code: a file in version control with a version name | 0 (Not started) |  |
+| The content hash and the lock file: a changed text needs a new version | 0 (Not started) |  |
+| Offline prompt tests: fast checks of the text with no API call | 0 (Not started) |  |
+| The baseline: a saved run on labeled messages, with the version, the hash and the model | 0 (Not started) |  |
+| The regression gate: not worse in total, and no must-pass case broken | 0 (Not started) |  |
+| Small sample sets are noisy: read the changed cases, not only the totals | 0 (Not started) |  |
+| Stable prompt bytes: no date and no request data in the fixed part | 0 (Not started) |  |
 
 ## Tickets
 
@@ -149,6 +157,7 @@ Exported from the academy on 2026-11-02.
 | T-013 | not started |  |  |
 | T-014 | not started |  |  |
 | T-015 | not started |  |  |
+| T-016 | not started |  |  |
 
 ## Review
 

@@ -15,7 +15,7 @@ Read this file first. It tells you the state of the work and the tasks that rema
 
 - `academy/index.html`, `academy/styles.css`, `academy/app.js`, `academy/markdown.js`.
 - `academy/content/curriculum.js`: 11 topics, 75 original subtopics, 3 labeled additions.
-  Lessons 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.1, 2.2, 2.3, 2.4, 2.5 and 2.6 have the status "ready".
+  Lessons 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6 and 2.7 have the status "ready".
 - `academy/content/lessons/`:
   - `01-how-llms-produce-text.js`: lesson 1.1 and ticket T-001.
   - `02-tokens-and-bpe.js`: lesson 1.2 and ticket T-002. It uses the "bpe" interactive in `app.js`.
@@ -43,11 +43,13 @@ Read this file first. It tells you the state of the work and the tasks that rema
     Its tool costs per 1,000 requests are also numbers in the lesson text. T-014 adds the `tool` mode to the T-013 triage.
   - `15-prompt-caching.js`: lesson 2.6 and ticket T-015. `15-ix.js` adds the "l2-6-cache" interactive.
     Its toy costs are also the acceptance numbers of T-015. T-015 adds prompt caching to the T-014 tool mode and the T-010 chat.
+  - `16-prompt-versioning.js`: lesson 2.7 and ticket T-016. `16-ix.js` adds the "l2-7-regression" interactive.
+    Its toy gate numbers (16 of 20 baseline, changes A to D) are also the acceptance numbers of T-016.
   - `index.html` loads each of these files.
 - `academy/tools/generate.js`: writes the tickets and the handoff templates into `project/`.
-  It wrote `project/tickets/T-001.md` to `T-015.md` and `project/handoffs/T-001-handoff.md` to `T-015-handoff.md`.
+  It wrote `project/tickets/T-001.md` to `T-016.md` and `project/handoffs/T-001-handoff.md` to `T-016-handoff.md`.
   It does not overwrite a handoff file that exists.
-- `academy/tools/selftest.js`: 193 tests. All pass.
+- `academy/tools/selftest.js`: 208 tests. All pass.
   Run it with `node academy/tools/selftest.js` from this folder.
 - `README.md`, `PROGRESS.md` and the `project/` scaffold exist.
 
@@ -59,10 +61,12 @@ Read this file first. It tells you the state of the work and the tasks that rema
 - The user's review of lesson 2.4 and ticket T-013 is pending.
 - The user's review of lesson 2.5 and ticket T-014 is pending.
 - The user's review of lesson 2.6 and ticket T-015 is pending.
-- The next lesson is 2.7, "Prompt versioning and prompt tests". It is the first lesson that is not "ready". Its status is "planned".
-  Build it only when the user asks for it.
+- The user's review of lesson 2.7 and ticket T-016 is pending.
+- Topic 2 is complete. All planned lessons (1.1 to 1.9 and 2.1 to 2.7) are "ready". No lesson is "planned".
+- The next work is the lesson plan for topic 3, "RAG (retrieval-augmented generation)". Topic 3 has no lessons in `curriculum.js` yet.
+  Its first lesson is the first lesson that is not "ready". Make the plan only when the user asks for it. The user approves the plan before the lessons are built.
 - The UI redesign is done (2026-11-02). The user's final review of it is pending. Report: `site-check/REDESIGN-REPORT.md`.
-- The topic 2 lesson plan (lessons 2.1 to 2.7) is in `curriculum.js`. Lessons 2.1, 2.2, 2.3, 2.4, 2.5 and 2.6 are "ready". Lesson 2.7 is "planned". The user approved it on 2026-11-02.
+- The topic 2 lesson plan (lessons 2.1 to 2.7) is in `curriculum.js`. All seven lessons are "ready". The user approved the plan on 2026-11-02.
 - FastAPI start: topic 3 (the user decided).
 
 ## Rules
