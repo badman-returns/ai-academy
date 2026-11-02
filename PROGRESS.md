@@ -17,6 +17,7 @@ Exported from the academy on 2026-11-02.
 | 1.9 | Reasoning models and thinking tokens | 1 of 3 | no |
 | 2.1 | Message roles and the stateless API | 1 of 3 | no |
 | 2.2 | System prompts and few-shot examples | 1 of 3 | no |
+| 2.3 | Chain of thought: reason before you answer | 1 of 3 | no |
 
 ## Mastery
 
@@ -97,6 +98,13 @@ Exported from the academy on 2026-11-02.
 | Turn rules: consecutive turns are combined, and a last assistant turn returns error 400 | 0 (Not started) |  |
 | Parts that stay the same come first, the part that changes comes last | 0 (Not started) |  |
 | Measure each prompt change on a labeled sample set, with no example in the set | 0 (Not started) |  |
+| Reasoning before the answer: the answer tokens can use the reasoning tokens | 0 (Not started) |  |
+| Prompted chain of thought: reasoning as visible text in the response | 0 (Not started) |  |
+| Answer tags and extraction: show only the answer, and treat a bad format as an error | 0 (Not started) |  |
+| Prompted reasoning compared to thinking: where the reasoning goes, and what each model allows | 0 (Not started) |  |
+| The cost of the reasoning: output tokens and time | 0 (Not started) |  |
+| The reasoning text is not a reliable record of how the model decided | 0 (Not started) |  |
+| When the mode is worth its cost: compare both modes on a sample set | 0 (Not started) |  |
 
 ## Tickets
 
@@ -113,6 +121,7 @@ Exported from the academy on 2026-11-02.
 | T-009 | not started |  |  |
 | T-010 | not started |  |  |
 | T-011 | not started |  |  |
+| T-012 | not started |  |  |
 
 ## Review
 

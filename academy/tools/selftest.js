@@ -914,5 +914,78 @@ test("lesson 2.2 files never address a person by a title", () => {
   });
 });
 
+/* Lesson 2.3: the "reason, then answer" interactive, the answer extraction and the lesson numbers */
+const cot = (A.ix || {})["l2-3-cot"];
+const runCot = (o) => cot.compute(Object.assign({ reason: false, shape: "ok", perDay: 2000 }, o));
+test("reason toy: the interactive uses the Haiku 5.5 row of the app.js price table", () => {
+  eq(runCot({}).model, L.MODELS[2]);
+  eq(cot.MODEL_ID, "claude-haiku-5-5");
+});
+test("reason toy: direct mode costs $0.000142 and reason mode $0.000199 per message, 1.40 times more", () => {
+  const d = runCot({ reason: false }), r = runCot({ reason: true });
+  eq([d.inputTokens, d.outputTokens, r.inputTokens, r.outputTokens], [1180, 48, 1240, 150]);
+  near(d.cost.total, 0.000142, 1e-12, "direct");
+  near(r.cost.total, 0.000199, 1e-12, "reason");
+  near(d.cost.total, L.cost(L.MODELS[2], 1180, 48).total, 1e-15, "same as the lesson 1.1 cost function");
+  eq(Math.round(r.cost.total / d.cost.total * 100) / 100, 1.4);
+});
+test("reason toy: at 2,000 messages a day, direct costs $0.284 and reason $0.398", () => {
+  near(runCot({ reason: false }).daily, 0.284, 1e-9, "direct");
+  near(runCot({ reason: true }).daily, 0.398, 1e-9, "reason");
+  near(runCot({ reason: true, perDay: 20000 }).daily, 3.98, 1e-9, "reason at 20,000");
+});
+test("reason toy: a response that the code rejects is still billed at the full cost", () => {
+  ["none", "two"].forEach((shape) => [false, true].forEach((reason) => {
+    const x = runCot({ reason, shape });
+    eq(x.view.ok, false, shape + " gives an error");
+    near(x.cost.total, runCot({ reason }).cost.total, 1e-15, shape + " cost");
+  }));
+});
+test("answer extraction: the employee sees only the text inside one pair of answer tags", () => {
+  eq(cot.extractAnswer("<reasoning>step 1</reasoning>\n<answer>\n category: IT \n</answer>"), { ok: true, text: "category: IT" });
+  eq(cot.extractAnswer("Note first.\n<answer>a\nb</answer>\nmore text").text, "a\nb");
+});
+test("answer extraction: no answer tags, two answer sections or an empty answer section is an error", () => {
+  eq(cot.extractAnswer("category: IT").ok, false, "no tags");
+  eq(cot.extractAnswer("<answer>IT</answer><answer>HR</answer>").ok, false, "two sections");
+  eq(cot.extractAnswer("<answer>  \n </answer>").ok, false, "empty");
+  eq(cot.extractAnswer("<answer>IT").ok, false, "no closing tag");
+  if (!/found 2/.test(cot.extractAnswer("<answer>IT</answer><answer>HR</answer>").error)) throw new Error("the error must name the count");
+});
+test("reason toy: the reasoning text never reaches the employee, in every mode and response shape", () => {
+  cot.SHAPES.forEach((shape) => [false, true].forEach((reason) => {
+    const x = runCot({ reason, shape });
+    const shown = x.view.ok ? x.view.text : "";
+    if (/<reasoning>|<\/reasoning>|access groups belong/i.test(shown)) throw new Error("reasoning shown: " + shape + " " + reason);
+    if (x.view.ok && /<answer>/.test(shown)) throw new Error("tag shown");
+  }));
+});
+test("reason toy: the direct answer routes the hard message wrong and the reasoned answer routes it right", () => {
+  const d = runCot({ reason: false }), r = runCot({ reason: true });
+  eq([d.view.ok, d.correct, r.view.ok, r.correct], [true, false, true, true]);
+  if (!/category: IT/.test(r.view.text) || !/priority: high/.test(r.view.text)) throw new Error("reasoned answer");
+});
+test("lesson 2.3 numbers: on 20 sample messages, the cost per correct answer is $0.0001775 direct and $0.000221 with reasoning, and the break-even cost of a wrong route is $0.00057", () => {
+  const d = 20 * L.cost(L.MODELS[2], 1180, 48).total, r = 20 * L.cost(L.MODELS[2], 1240, 150).total;
+  near(d, 0.00284, 1e-12, "direct set");
+  near(r, 0.00398, 1e-12, "reason set");
+  near(d / 16, 0.0001775, 1e-12, "direct per correct");
+  near(r / 18, 0.000221, 1e-6, "reason per correct");
+  near((r - d) / (18 - 16), 0.00057, 1e-12, "extra cost per extra correct answer");
+});
+test("lesson 2.3 numbers: the T-012 Markdown contains the module, the tests and the acceptance numbers", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-012.md"), "utf8");
+  ["--mode reason", "reasoning.py", "extract_answer", "parse_triage", "answer_tags", "scripts/triage_eval.py", "AnswerFormatError", "test_missing_answer_tags_is_an_error",
+    "test_reasoning_never_reaches_the_employee", "0.000142", "0.000199", "claude-haiku-5-5", "Project phase: 1",
+    "<answer>", "reasoning_extraction"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+  if (/captain/i.test(md)) throw new Error("the ticket addresses a person");
+});
+test("lesson 2.3 is ready, covers t2-system and links ticket T-012", () => {
+  const l = A.lessons["2.3"];
+  eq([l.topic, l.covers, l.tickets, A.tickets["T-012"].lesson, A.tickets["T-012"].phase], ["t2", ["t2-system"], ["T-012"], "2.3", 1]);
+  const ids = JSON.stringify(l);
+  if (!ids.includes('"l2-3-cot"')) throw new Error("the lesson does not place the interactive");
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
