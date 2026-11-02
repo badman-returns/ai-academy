@@ -408,5 +408,142 @@ test("lesson 1.6 numbers: the T-006 Markdown contains the fixture and the accept
   ["training_toy.json", "0.842", "2.321", "0.602", "0.313", "1.313", "[0.731, 0.269]", "0.554", "0.693", "[0.099, 0.811, 0.060, 0.031]", "0.995", "0.507"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
 });
 
+/* Lesson 1.7: the KV cache interactive, the lesson numbers and ticket T-007 */
+const kvc = (A.ix || {})["l1-7-kvcache"];
+test("lesson 1.7: the interactive l1-7-kvcache is loaded and lesson 1.7 shows it", () => {
+  if (typeof kvc !== "function") throw new Error("l1-7-kvcache is not loaded");
+  const l = A.lessons["1.7"];
+  if (!l) throw new Error("lesson 1.7 missing");
+  const ids = l.levels.flatMap((lv) => lv.blocks.filter((b) => b.type === "interactive").map((b) => b.id));
+  if (!ids.includes("l1-7-kvcache")) throw new Error("lesson 1.7 does not show l1-7-kvcache");
+  eq(l.tickets, ["T-007"]);
+});
+test("lesson 1.7 steps: with the cache, 4 prompt and 4 output tokens need 7 K, V computations and 28 scores; without it 22 and 74", () => {
+  const on = kvc.steps({ prompt: 4, output: 4, cache: true }), off = kvc.steps({ prompt: 4, output: 4, cache: false });
+  eq([on.kv, on.scores, on.cacheEntries, on.cols, on.rows.length], [7, 28, 7, 7, 4]);
+  eq([off.kv, off.scores, off.cacheEntries], [22, 74, 0]);
+  eq(on.rows[2].cells, ["cached", "cached", "cached", "cached", "cached", "new", ""], "step 2 with the cache");
+  eq(off.rows[2].cells, ["again", "again", "again", "again", "again", "new", ""], "step 2 without the cache");
+  eq(kvc.steps({ prompt: 8, output: 8, cache: true }).kv, 15);
+  eq(kvc.steps({ prompt: 8, output: 8, cache: false }).scores, 596);
+});
+test("lesson 1.7 steps: for 1,000 prompt and 500 output tokens the cache cuts K, V work from 624,750 to 1,499", () => {
+  const on = kvc.steps({ prompt: 1000, output: 500, cache: true }), off = kvc.steps({ prompt: 1000, output: 500, cache: false });
+  eq([on.kv, off.kv, on.scores, off.scores], [1499, 624750, 1124250, 395833250]);
+});
+test("lesson 1.7 memory: 524,288 bytes per token, 2,147,483,648 for 4,096 tokens, 536,870,912 with 8 KV heads", () => {
+  eq(kvc.memory({ tokens: 1, kvHeads: 32, bytes: 2 }).cache, 524288);
+  eq(kvc.memory({ tokens: 4096, kvHeads: 32, bytes: 2 }).cache, 2147483648);
+  eq(kvc.memory({ tokens: 4096, kvHeads: 8, bytes: 2 }).cache, 536870912);
+  eq(kvc.memory({ tokens: 1, kvHeads: 1, bytes: 2 }).perToken, 16384);
+  eq(kvc.memory({ tokens: 4096, kvHeads: 32, bytes: 1 }).cache, 1073741824, "8-bit halves the cache");
+  eq(kvc.memory({ tokens: 100000, kvHeads: 32, bytes: 2 }).cache, 52428800000);
+  eq(kvc.memory({ tokens: 100000, kvHeads: 8, bytes: 2 }).cache, 13107200000);
+});
+test("lesson 1.7 memory: block weights are 6,442,450,944 and the cache equals them at 24,576 = 6 x 4096 tokens", () => {
+  const m = kvc.memory({ tokens: 8192, kvHeads: 32, bytes: 2 });
+  eq(m.weightCount, 6442450944);
+  eq(m.equalAt, 24576);
+  eq(6 * 4096, 24576, "check l1-7-L3-b");
+  near(m.ratio, 1 / 3, 1e-12, "ratio at 8,192");
+  near(m.cacheShare, 0.25, 1e-12, "share at 8,192");
+  eq(Math.round(kvc.memory({ tokens: 100000, kvHeads: 32, bytes: 2 }).cacheShare * 100), 80);
+  eq(Math.round(kvc.memory({ tokens: 100000, kvHeads: 8, bytes: 2 }).cacheShare * 100), 50);
+  eq(2 * 24 * 16 * 64 * 2, 98304, "check l1-7-L2-a");
+});
+test("lesson 1.7 numbers: a cached decode of the 1.4 toy gives 0.330, 0.670 for cat and 0.497, 0.752 for sat", () => {
+  const Q = [[1, 0], [0, 1], [1, 1]], K = [[1, 0], [1, 1], [0, 1]], V = [[1, 0], [0, 1], [1, 1]];
+  const attend = (q, ks, vs) => {
+    const s = ks.map((k) => (q[0] * k[0] + q[1] * k[1]) / Math.SQRT2), m = Math.max(...s);
+    const e = s.map((x) => Math.exp(x - m)), t = e.reduce((a, b) => a + b, 0), w = e.map((x) => x / t);
+    return { w, out: [0, 1].map((c) => w.reduce((acc, wj, j) => acc + wj * vs[j][c], 0)) };
+  };
+  const ck = [], cv = [], outs = [];
+  for (let i = 0; i < 3; i++) { ck.push(K[i]); cv.push(V[i]); outs.push(attend(Q[i], ck, cv)); }
+  eq(outs[1].out.map(r3), [0.33, 0.67]);
+  eq(outs[2].w.map(r3), [0.248, 0.503, 0.248]);
+  eq(outs[2].out.map(r3), [0.497, 0.752]);
+});
+test("lesson 1.7 numbers: a cached decode of the 1.5 block toy equals the full causal pass for every token", () => {
+  const T = blk.TOY, D = 4;
+  const mul = (v, W) => W[0].map((_, c) => v.reduce((s, x, r) => s + x * W[r][c], 0));
+  const cache = { k: [], v: [] }, outs = [];
+  T.x.forEach((x) => {
+    const a = blk.layerNorm(x), q = mul(a, T.w_q);
+    cache.k.push(mul(a, T.w_k)); cache.v.push(mul(a, T.w_v));
+    const s = cache.k.map((k) => q.reduce((acc, qi, i) => acc + qi * k[i], 0) / Math.sqrt(D)), m = Math.max(...s);
+    const e = s.map((z) => Math.exp(z - m)), t = e.reduce((p, z) => p + z, 0);
+    const att = mul([0, 1, 2, 3].map((c) => e.reduce((acc, ej, j) => acc + (ej / t) * cache.v[j][c], 0)), T.w_o);
+    const h = x.map((xi, i) => xi + att[i]);
+    const ff = mul(mul(blk.layerNorm(h), T.w_1).map((z) => Math.max(0, z)), T.w_2);
+    outs.push(h.map((hi, i) => hi + ff[i]));
+  });
+  const full = runBlock({}).first.y;
+  outs.forEach((o, i) => o.forEach((z, c) => near(z, full[i][c], 1e-12, "token " + i + " feature " + c)));
+  eq(outs[2].map(r3), [1.236, 0.829, -0.31, 2.958]);
+  eq(cache.k.length, 3);
+});
+test("lesson 1.7 debugging: adding k, v after attention changes token 1 to -0.366, 2.655, 0.500, 0.500; the full pass gives -0.961, 3.617, -0.726, 1.510", () => {
+  const T = blk.TOY;
+  const mul = (v, W) => W[0].map((_, c) => v.reduce((s, x, r) => s + x * W[r][c], 0));
+  // The bug: attend first, then add k and v. An empty cache falls back to the token itself.
+  const ck = [], cv = [], outs = [];
+  T.x.forEach((x) => {
+    const a = blk.layerNorm(x), q = mul(a, T.w_q), k = mul(a, T.w_k), v = mul(a, T.w_v);
+    const keys = ck.length ? ck : [k], vals = cv.length ? cv : [v];
+    const s = keys.map((kk) => q.reduce((p, qi, i) => p + qi * kk[i], 0) / 2), m = Math.max(...s);
+    const e = s.map((z) => Math.exp(z - m)), t = e.reduce((p, z) => p + z, 0);
+    const att = mul([0, 1, 2, 3].map((c) => e.reduce((p, ej, j) => p + (ej / t) * vals[j][c], 0)), T.w_o);
+    ck.push(k); cv.push(v);
+    const h = x.map((xi, i) => xi + att[i]);
+    const ff = mul(mul(blk.layerNorm(h), T.w_1).map((z) => Math.max(0, z)), T.w_2);
+    outs.push(h.map((hi, i) => hi + ff[i]));
+  });
+  const full = runBlock({}).first.y;
+  eq(outs[0].map(r3), full[0].map(r3), "token 0 matches");
+  eq(outs[1].map(r3), [-0.366, 2.655, 0.5, 0.5]);
+  eq(full[1].map(r3), [-0.961, 3.617, -0.726, 1.51]);
+});
+test("lesson 1.7 debugging: with a 20,000-token window and max_tokens 1,024, the lesson chat first fails at turn 37 with 19,200 input tokens", () => {
+  let k = 1;
+  while (1200 + 500 * (k - 1) + 1024 <= 20000) k++;
+  eq([k, 1200 + 500 * (k - 1)], [37, 19200]);
+});
+test("lesson 1.7 numbers: a 10-turn chat sends 1,200 to 5,700 input tokens, 34,500 in total; 20 turns send 119,000", () => {
+  const reqs = (n) => Array.from({ length: n }, (_, k) => 1000 + 200 + 500 * k);
+  const r10 = reqs(10), r20 = reqs(20), sum = (a) => a.reduce((s, x) => s + x, 0);
+  eq([r10[0], r10[9], sum(r10)], [1200, 5700, 34500]);
+  eq([r20[19], sum(r20)], [10700, 119000]);
+  near(sum(r10) * 4 / 1e6, 0.138, 1e-12, "Opus input cost");
+  eq(2000 + 4 * 500 + 100, 4100, "check l1-7-L2-b");
+});
+test("lesson 1.7 numbers: the T-007 trim example keeps the newest 7 pairs (15 messages, 4,700 input tokens)", () => {
+  // Keep the largest number of newest pairs with 1,000 + 500 x pairs + 200 + 1,024 <= 6,000.
+  let pairs = 10;
+  while (pairs > 0 && 1000 + 500 * pairs + 200 + 1024 > 6000) pairs--;
+  eq([pairs, 2 * pairs + 1, 1000 + 500 * pairs + 200], [7, 15, 4700]);
+  eq([4976 + 1024 <= 6000, 4977 + 1024 <= 6000], [true, false]);
+  if (1000 + 5000 + 1024 <= 6000) throw new Error("the 5,000-token question must not fit");
+});
+test("ticket T-007 converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
+  const t = A.tickets["T-007"];
+  if (!t) throw new Error("T-007 missing");
+  eq([t.lesson, t.phase], ["1.7", 1]);
+  const md = A.md.ticket(t);
+  if (!md.startsWith("# T-007: ")) throw new Error("bad title line");
+  for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
+  if (/<[a-z]+[ >]/i.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+});
+test("lesson 1.7 numbers: the T-007 Markdown file contains the fixture and the acceptance numbers", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-007.md"), "utf8");
+  ["block_toy.json", "[1.236, 0.829, -0.310, 2.958]", "524,288", "2,147,483,648", "536,870,912", "34,500", "4,700", "ContextBudgetError"]
+    .forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+  if (!fs.existsSync(path.join(base, "..", "project", "handoffs", "T-007-handoff.md"))) throw new Error("T-007 handoff template missing");
+});
+test("lesson 1.7: index.html loads 07-context-kv-cache.js and 07-ix.js", () => {
+  const html = fs.readFileSync(path.join(base, "index.html"), "utf8");
+  ["content/lessons/07-context-kv-cache.js", "content/lessons/07-ix.js"].forEach((s) => { if (!html.includes('src="' + s + '"')) throw new Error(s + " missing"); });
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

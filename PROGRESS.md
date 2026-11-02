@@ -12,6 +12,7 @@ Exported from the academy on 2026-11-02.
 | 1.4 | Attention: query, key and value | 1 of 3 | no |
 | 1.5 | The transformer block | 1 of 3 | no |
 | 1.6 | Pretraining and post-training (SFT, RLHF, DPO) | 1 of 3 | no |
+| 1.7 | Context window and KV cache | 1 of 3 | no |
 
 ## Mastery
 
@@ -56,6 +57,13 @@ Exported from the academy on 2026-11-02.
 | RLHF: maximize the reward with a KL penalty to the reference model | 0 (Not started) |  |
 | DPO: learn from preference pairs without a separate reward model | 0 (Not started) |  |
 | Reward hacking, and why β keeps the model near the reference | 0 (Not started) |  |
+| The context window: one limit on input plus output tokens for one request | 0 (Not started) |  |
+| The KV cache: keep the keys and values of earlier tokens, and compute them only for the new token | 0 (Not started) |  |
+| Why the cache gives the same result: the causal mask and the per-token parts of the block | 0 (Not started) |  |
+| Cache size = 2 × blocks × KV heads × head size × bytes × tokens | 0 (Not started) |  |
+| Each decode step reads all the weights and the whole cache | 0 (Not started) |  |
+| The API is stateless: each chat request sends the full history, so total input grows with the square of the turns | 0 (Not started) |  |
+| Ways to make the cache smaller: fewer KV heads, fewer bytes, paged memory | 0 (Not started) |  |
 
 ## Tickets
 
@@ -67,6 +75,7 @@ Exported from the academy on 2026-11-02.
 | T-004 | not started |  |  |
 | T-005 | not started |  |  |
 | T-006 | not started |  |  |
+| T-007 | not started |  |  |
 
 ## Review
 
