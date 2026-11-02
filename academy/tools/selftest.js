@@ -793,5 +793,126 @@ test("lesson 2.1 numbers: the T-010 Markdown contains the chat command, the reus
   eq([A.tickets["T-010"].lesson, A.tickets["T-010"].phase], ["2.1", 1]);
 });
 
+/* Lesson 2.2: the request builder interactive, the lesson numbers and ticket T-011 */
+const rb = (A.ix || {})["l2-2-request"];
+const build = (o) => rb.compute(o || {});
+const roles = (r) => r.body.messages.map((m) => m.role);
+const codes = (r) => r.flags.map((f) => f.code);
+test("request builder: the interactive is registered and uses the price table of app.js", () => {
+  if (typeof rb !== "function" || rb.mount !== rb) throw new Error("l2-2-request is not a mount function");
+  eq(build().model, L.MODELS[2], "default model is Haiku 5.5");
+  eq(build({ model: 0 }).model, L.MODELS[0]);
+});
+test("request builder: the default request has the instructions in system, 3 example pairs, and the message as the last user turn", () => {
+  const r = build();
+  eq(r.status, "ok");
+  eq(roles(r), ["user", "assistant", "user", "assistant", "user", "assistant", "user"]);
+  if (typeof r.body.system !== "string" || !r.body.system.includes("<instructions>")) throw new Error("system has no tagged instructions");
+  eq([r.tokens.input, r.tokens.stablePrefix], [280, 245]);
+});
+test("request builder: instructions in a user turn before example turns give two user turns in a row, and no system field", () => {
+  const r = build({ instr: "user" });
+  eq(roles(r).slice(0, 3), ["user", "user", "assistant"]);
+  eq(r.status, "warn");
+  if (!codes(r).includes("consecutive")) throw new Error("no consecutive-turn flag");
+  if ("system" in r.body) throw new Error("body has a system field with nothing in it");
+});
+test("request builder: a last assistant turn (prefill) is flagged as error 400", () => {
+  const r = build({ prefill: true });
+  eq(roles(r).slice(-1), ["assistant"]);
+  eq(r.status, "error");
+  const f = r.flags.find((x) => x.code === "prefill");
+  if (!f || f.level !== "error" || !f.text.includes("400")) throw new Error("no error flag that names 400");
+});
+test("request builder: a date at the start of the system prompt makes the stable prefix 0 tokens", () => {
+  const r = build({ date: true });
+  eq([r.tokens.input, r.tokens.stablePrefix], [290, 0]);
+  if (!codes(r).includes("date")) throw new Error("no date flag");
+});
+test("request builder: examples in the system prompt are wrapped in example tags, and untagged examples are flagged", () => {
+  const t = build({ exPlace: "system" });
+  eq((t.body.system.match(/<example>/g) || []).length, 3);
+  if (!t.body.system.includes("<examples>")) throw new Error("no <examples> wrapper");
+  eq(roles(t), ["user"]);
+  eq(t.tokens.input, 285);
+  const u = build({ exPlace: "system", tags: false });
+  if (u.body.system.includes("<example>")) throw new Error("tags off still has tags");
+  if (!codes(u).includes("untagged")) throw new Error("no untagged flag");
+  eq(u.tokens.input, 270);
+});
+test("request builder: a new employee message changes only the last turn, so the request prefix stays the same", () => {
+  const a = build({ msg: 0 }), b = build({ msg: 1 });
+  eq(a.body.system, b.body.system, "system");
+  eq(a.body.messages.slice(0, -1), b.body.messages.slice(0, -1), "earlier turns");
+  if (JSON.stringify(a.body.messages.slice(-1)) === JSON.stringify(b.body.messages.slice(-1))) throw new Error("the last turn did not change");
+});
+test("request builder: zero examples cost $0.021 and three examples $0.033 per 1,000 calls on Haiku 5.5 ($0.84 and $1.32 on Opus 5.5)", () => {
+  near(build({ examples: 0 }).cost.total * 1000, 0.021, 1e-9, "Haiku 0");
+  near(build({ examples: 3 }).cost.total * 1000, 0.033, 1e-9, "Haiku 3");
+  near(build({ examples: 0, model: 0 }).cost.total * 1000, 0.84, 1e-9, "Opus 0");
+  near(build({ examples: 3, model: 0 }).cost.total * 1000, 1.32, 1e-9, "Opus 3");
+  if (!codes(build({ examples: 1 })).includes("few")) throw new Error("one example is not flagged as fewer than 3");
+});
+test("request builder: for every setting, the token sum matches the parts, the prefix is not larger than the input, and only a prefill gives an error", () => {
+  let n = 0;
+  ["system", "user"].forEach((instr) => [0, 1, 3].forEach((examples) => ["system", "turns"].forEach((exPlace) =>
+    [true, false].forEach((tags) => [true, false].forEach((date) => [true, false].forEach((prefill) => [0, 1, 2].forEach((msg) => {
+      const r = build({ instr, examples, exPlace, tags, date, prefill, msg });
+      n++;
+      eq(r.parts.reduce((s, p) => s + p.tokens, 0), r.tokens.input, "token sum");
+      if (r.tokens.stablePrefix > r.tokens.input) throw new Error("prefix larger than input");
+      eq(r.status === "error", prefill, "error only with prefill");
+      eq(roles(r)[0], "user", "first message");
+      eq(roles(r).slice(-1)[0], prefill ? "assistant" : "user", "last message");
+      if (!r.parts.find((p) => p.key === "message").changes) throw new Error("message not marked as changing");
+    })))))));
+  eq(n, 288);
+});
+test("lesson 2.2 is ready, covers t2-system, shows the request builder and links ticket T-011", () => {
+  const c = A.curriculum.find((t) => t.id === "t2").lessons.find((l) => l.id === "2.2");
+  eq([c.status, c.covers], ["ready", ["t2-system"]]);
+  const les = A.lessons["2.2"];
+  eq(les.tickets, ["T-011"]);
+  const ix = les.levels.flatMap((lv) => lv.blocks).filter((b) => b.type === "interactive").map((b) => b.id);
+  eq(ix, ["l2-2-request"]);
+});
+test("ticket T-011 is phase 1, builds on T-010 and T-001, and needs no later ticket", () => {
+  const t = A.tickets["T-011"];
+  eq([t.lesson, t.phase], ["2.2", 1]);
+  const all = Object.values(t.fields).join(" ");
+  ["T-010", "T-001"].forEach((s) => { if (!all.includes(s)) throw new Error("does not name " + s); });
+  ["T-012", "T-013", "T-014", "T-015", "T-016"].forEach((s) => { if (all.includes(s)) throw new Error("names a later ticket " + s); });
+});
+test("lesson 2.2 numbers: the T-011 sample format lines parse as JSON with an allowed category and priority", () => {
+  const m = A.tickets["T-011"].fields.files.match(/helpdesk\.jsonl<\/code>, with three example lines[\s\S]*?<pre><code>([\s\S]*?)<\/code><\/pre>/);
+  if (!m) throw new Error("sample block not found in the files field");
+  const rows = m[1].trim().split("\n").map((s) => JSON.parse(s));
+  eq(rows.length, 3);
+  rows.forEach((x) => {
+    if (!["IT", "HR", "facilities", "finance", "other"].includes(x.category)) throw new Error("bad category " + x.category);
+    if (!["low", "medium", "high"].includes(x.priority)) throw new Error("bad priority " + x.priority);
+  });
+});
+test("lesson 2.2 numbers: the eval run of 60 calls costs about $0.02 at the Haiku 5.5 prices", () => {
+  near(60 * (400 * L.MODELS[2].in + 500 * L.MODELS[2].out) / 1e6, 0.0174, 1e-9);
+});
+test("ticket T-011 converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
+  const md = A.md.ticket(A.tickets["T-011"]);
+  if (!md.startsWith("# T-011: ")) throw new Error("bad title line");
+  for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
+  if (/(^|[^\\])<[a-z]+[ >]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+});
+test("lesson 2.2 numbers: the T-011 Markdown contains the files, the tests and the acceptance numbers", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-011.md"), "utf8");
+  ["assistant/triage.py", "helpdesk.jsonl", "triage_examples.jsonl", "scripts/triage_eval.py", "test_examples_alternate_user_and_assistant_turns",
+    "test_request_never_ends_with_an_assistant_turn", "0.65", "category: <one of"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+});
+test("lesson 2.2 files never address a person by a title", () => {
+  ["11-system-few-shot.js", "11-ix.js"].forEach((f) => {
+    const s = fs.readFileSync(path.join(base, "content", "lessons", f), "utf8");
+    if (/captain/i.test(s)) throw new Error(f + " contains a direct address");
+  });
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

@@ -16,6 +16,7 @@ Exported from the academy on 2026-11-02.
 | 1.8 | Hallucination and grounding | 1 of 3 | no |
 | 1.9 | Reasoning models and thinking tokens | 1 of 3 | no |
 | 2.1 | Message roles and the stateless API | 1 of 3 | no |
+| 2.2 | System prompts and few-shot examples | 1 of 3 | no |
 
 ## Mastery
 
@@ -89,6 +90,13 @@ Exported from the academy on 2026-11-02.
 | Assistant messages that you write: synthetic history, and why prefill returns error 400 on current models | 0 (Not started) |  |
 | The application owns the memory: storage, safe updates, trimming and the forget-history bug | 0 (Not started) |  |
 | Content blocks in the history: send the assistant content back unchanged | 0 (Not started) |  |
+| The system prompt: role, task, rules and output format for every call | 0 (Not started) |  |
+| Few-shot examples: show the task with labeled inputs and outputs | 0 (Not started) |  |
+| Where examples go: in the system prompt or as user and assistant turns | 0 (Not started) |  |
+| XML tags separate instructions, examples and the input | 0 (Not started) |  |
+| Turn rules: consecutive turns are combined, and a last assistant turn returns error 400 | 0 (Not started) |  |
+| Parts that stay the same come first, the part that changes comes last | 0 (Not started) |  |
+| Measure each prompt change on a labeled sample set, with no example in the set | 0 (Not started) |  |
 
 ## Tickets
 
@@ -104,6 +112,7 @@ Exported from the academy on 2026-11-02.
 | T-008 | not started |  |  |
 | T-009 | not started |  |  |
 | T-010 | not started |  |  |
+| T-011 | not started |  |  |
 
 ## Review
 
