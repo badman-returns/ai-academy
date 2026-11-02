@@ -10,6 +10,7 @@ Exported from the academy on 2026-11-02.
 | 1.2 | Tokens and BPE in depth | 1 of 3 | no |
 | 1.3 | Embeddings and cosine similarity | 1 of 3 | no |
 | 1.4 | Attention: query, key and value | 1 of 3 | no |
+| 1.5 | The transformer block | 1 of 3 | no |
 
 ## Mastery
 
@@ -40,6 +41,13 @@ Exported from the academy on 2026-11-02.
 | Quadratic cost in context length | 0 (Not started) |  |
 | Why the scores are divided by the square root of d_k | 0 (Not started) |  |
 | Multi-head attention (high level) | 0 (Not started) |  |
+| A block maps n vectors of size d_model to n vectors of the same size, so blocks stack | 0 (Not started) |  |
+| The feed-forward layer: a per-token MLP with a non-linear activation | 0 (Not started) |  |
+| Residual connections: each part adds to the vector, it does not replace it | 0 (Not started) |  |
+| Layer norm: mean 0 and variance 1 over the features of one token | 0 (Not started) |  |
+| Pre-LN compared to post-LN, and the final layer norm | 0 (Not started) |  |
+| Parameters per block: about 12 × d_model² when d_ff = 4 × d_model | 0 (Not started) |  |
+| Where position information enters the model | 0 (Not started) |  |
 
 ## Tickets
 
@@ -49,6 +57,7 @@ Exported from the academy on 2026-11-02.
 | T-002 | not started |  |  |
 | T-003 | not started |  |  |
 | T-004 | not started |  |  |
+| T-005 | not started |  |  |
 
 ## Review
 

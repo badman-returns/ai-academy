@@ -178,7 +178,7 @@ test("PROGRESS.md for an empty state lists lesson 1.1 as not completed", () => {
 const lessonDir = path.join(base, "content", "lessons");
 const lessonFiles = fs.readdirSync(lessonDir).filter((f) => f.endsWith(".js")).sort();
 test("the self-test loads the interactives that lesson files register in A.ix", () => {
-  ["cosine2d", "l1-4-attention"].forEach((k) => { if (typeof (A.ix || {})[k] !== "function") throw new Error(k + " is not loaded"); });
+  ["cosine2d", "l1-4-attention", "l1-5-block"].forEach((k) => { if (typeof (A.ix || {})[k] !== "function") throw new Error(k + " is not loaded"); });
 });
 test("index.html loads every lesson file in content/lessons, before app.js", () => {
   const html = fs.readFileSync(path.join(base, "index.html"), "utf8");
@@ -223,9 +223,9 @@ test("every ready lesson in curriculum.js has a lesson object with the same id",
     if (o.id !== l.id) throw new Error(l.id + " lesson object has id " + o.id);
     n++;
   }));
-  if (n < 4) throw new Error("expected at least 4 ready lessons, found " + n);
+  if (n < 5) throw new Error("expected at least 5 ready lessons, found " + n);
 });
-["T-002", "T-003", "T-004"].forEach((id) => {
+["T-002", "T-003", "T-004", "T-005"].forEach((id) => {
   test("ticket " + id + " converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
     const t = A.tickets[id];
     if (!t) throw new Error(id + " missing");
@@ -234,6 +234,74 @@ test("every ready lesson in curriculum.js has a lesson object with the same id",
     for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
     if (/<[a-z]+[ >]/i.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
   });
+});
+
+/* Lesson 1.5: the transformer block interactive and the lesson numbers */
+const blk = (A.ix || {})["l1-5-block"];
+const runBlock = (o) => blk.compute(Object.assign({ token: 2, attn: true, ffn: true, res: true, ln: true, scale: 1, blocks: 1 }, o));
+const len = (v) => Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+test("block toy: the attention weights of \"sat\" add up to 1 and are 0.665, 0.214, 0.121", () => {
+  const w = runBlock({}).first.weights[2];
+  near(w.reduce((s, x) => s + x, 0), 1, 1e-9, "sum");
+  eq(w.map(r3), [0.665, 0.214, 0.121]);
+});
+test("block toy: the causal mask gives \"The\" the weights 1, 0, 0", () => {
+  eq(runBlock({ token: 0 }).first.weights[0].map(r3), [1, 0, 0]);
+});
+test("block toy: the output of \"sat\" is 1.236, 0.829, -0.310, 2.958 (ticket T-005 criterion 4)", () => {
+  eq(runBlock({}).out.map(r3), [1.236, 0.829, -0.31, 2.958]);
+});
+test("block toy: with attention and feed-forward off, the residual block returns its input exactly", () => {
+  [0, 1, 2].forEach((t) => { const r = runBlock({ token: t, attn: false, ffn: false }); eq(r.out, r.input[t], "token " + t); });
+});
+test("block toy: with layer norm, input scales 0.25 to 4 give the same attention weights within 0.001 (eps causes the small difference)", () => {
+  const a = runBlock({ scale: 1 }).first.weights[2];
+  [0.25, 4].forEach((sc) => runBlock({ scale: sc }).first.weights[2].forEach((x, i) => near(x, a[i], 1e-3, "scale " + sc + " weight " + i)));
+});
+test("block toy: without layer norm, a larger input scale makes the attention weights sharper", () => {
+  const w = runBlock({ ln: false, scale: 4 }).first.weights[2];
+  if (!(w[0] > 0.95)) throw new Error("expected the first weight above 0.95, got " + w[0]);
+});
+test("block toy: without residual connections, \"sat\" loses its input (cosine -0.113)", () => {
+  near(runBlock({}).keep, 0.98, 0.005, "with residual");
+  near(runBlock({ res: false }).keep, -0.113, 0.001, "without residual");
+});
+test("block toy: over 12 blocks the vector length stays below 20 with layer norm and grows above 10,000 without it", () => {
+  const withLn = runBlock({ blocks: 12 }).stack, noLn = runBlock({ blocks: 12, ln: false }).stack;
+  eq(withLn.length, 12, "stack size");
+  if (!(withLn[11].length < 20)) throw new Error("with layer norm: " + withLn[11].length);
+  if (!(noLn[11].length > 10000)) throw new Error("without layer norm: " + noLn[11].length);
+});
+test("ticket T-005 fixture data/block_toy.json equals the numbers of the lesson interactive", () => {
+  const html = A.tickets["T-005"].fields.files;
+  const m = html.match(/block_toy\.json<\/code>[\s\S]*?<pre><code>([\s\S]*?)<\/code><\/pre>/);
+  if (!m) throw new Error("fixture block not found in the files field");
+  eq(JSON.parse(m[1]), blk.TOY);
+});
+test("lesson 1.5 numbers: layer norm of 2, 4, 6, 8 is -1.342, -0.447, 0.447, 1.342, and the scale does not matter", () => {
+  eq(blk.layerNorm([2, 4, 6, 8]).map(r3), [-1.342, -0.447, 0.447, 1.342]);
+  eq(blk.layerNorm([20, 40, 60, 80]).map(r3), [-1.342, -0.447, 0.447, 1.342]);
+  eq(blk.layerNorm([1, 1, 0, 2]).map(r3), [0, 0, -1.414, 1.414]);
+  eq(blk.layerNorm([3, 3, 3, 3]), [0, 0, 0, 0]);
+});
+test("lesson 1.5 numbers: the feed-forward example gives 0.5, -1.0 with ReLU and -1.5, -3.0 without it", () => {
+  const W1 = [[1, -1, 0, 1], [0, 1, -1, 1]], W2 = [[0.5, 0], [0, 0.5], [1, 1], [0, -0.5]];
+  const mv = (v, W) => W[0].map((_, c) => v.reduce((s, x, r) => s + x * W[r][c], 0));
+  const h = mv([1, 2], W1);
+  eq(h, [1, 1, -2, 3], "hidden");
+  eq(mv(h.map((x) => Math.max(0, x)), W2), [0.5, -1], "with ReLU");
+  eq(mv(h, W2), [-1.5, -3], "without ReLU");
+});
+test("lesson 1.5 numbers: one block has 3,145,728 weights for 512 and 2048, 3,152,384 with biases and layer norm", () => {
+  const d = 512, f = 2048, w = 4 * d * d + 2 * d * f;
+  eq(w, 3145728);
+  eq(w + 4 * d + (f + d) + 2 * 2 * d, 3152384);
+  eq(4 * 1024 * 1024 + 2 * 1024 * 4096, 12582912, "check l1-5-L2-b");
+  eq(6 * 2048, 12288, "check l1-5-L3-b");
+});
+test("lesson 1.5 numbers: the T-005 Markdown contains the fixture and the acceptance numbers", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-005.md"), "utf8");
+  ["block_toy.json", "[1.236, 0.829, -0.310, 2.958]", "3,145,728", "3,152,384"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
 });
 
 console.log("\n" + pass + " passed, " + fail + " failed");
