@@ -545,5 +545,84 @@ test("lesson 1.7: index.html loads 07-context-kv-cache.js and 07-ix.js", () => {
   ["content/lessons/07-context-kv-cache.js", "content/lessons/07-ix.js"].forEach((s) => { if (!html.includes('src="' + s + '"')) throw new Error(s + " missing"); });
 });
 
+/* Lesson 1.8: the grounding interactive, the lesson numbers and ticket T-008 */
+const grd = (A.ix || {})["l1-8-grounding"];
+const runGround = (o) => grd.compute(Object.assign({ q: "refund-window", ground: false, k: 1, minScore: 0.5, instruct: false, stale: false, temp: 1 }, o));
+const probs = (r) => r.candidates.map((c) => r3(c.p));
+const scores = (r) => r.ranked.map((x) => x.doc.id + " " + r3(x.score));
+test("the self-test loads the lesson 1.8 interactive l1-8-grounding", () => {
+  if (typeof grd !== "function") throw new Error("l1-8-grounding is not loaded");
+  if (typeof grd.compute !== "function") throw new Error("compute is not exported");
+});
+test("grounding toy: retrieval ranks the refund question 0.984, 0.933, 0.421, 0.214 (lesson worked example and T-008 criterion 1)", () => {
+  eq(scores(runGround({})), ["refund-policy 0.984", "warranty-claims 0.933", "delivery-times 0.421", "vpn-setup 0.214"]);
+});
+test("grounding toy: without sources the refund question answers the wrong 30 days with 0.563, and the correct 45 days has 0.076", () => {
+  const r = runGround({});
+  eq(probs(r), [0.207, 0.563, 0.076, 0.126, 0.028]);
+  eq(r.top.answer, "30 days");
+  eq(r.verdict, "unsupported");
+});
+test("grounding toy: with the refund-policy source, 45 days gets 0.924 and the verdict is grounded", () => {
+  const r = runGround({ ground: true });
+  eq(r.top.answer, "45 days");
+  near(r.top.p, 0.924, 0.0005, "45 days");
+  eq(r.verdict, "grounded");
+});
+test("grounding toy: a stale index gives a cited but wrong 30 days (verdict stale)", () => {
+  const r = runGround({ ground: true, stale: true });
+  eq(r.top.answer, "30 days");
+  eq(r.verdict, "stale");
+  if (!(r.pWrong > 0.99)) throw new Error("expected pWrong above 0.99, got " + r.pWrong);
+});
+test("grounding toy: temperature 0.25 without sources makes the wrong answer more certain (30 days 0.979), not correct", () => {
+  const r = runGround({ temp: 0.25 });
+  eq(r.top.answer, "30 days");
+  near(r.top.p, 0.979, 0.0005, "30 days");
+  if (!(r.pCorrect < 0.001)) throw new Error("expected pCorrect below 0.001, got " + r.pCorrect);
+});
+test("grounding toy: k = 1 misses the warranty document (refund-policy 0.995 is above warranty-claims 0.983), and k = 2 finds it", () => {
+  eq(scores(runGround({ q: "warranty-length" })).slice(0, 2), ["refund-policy 0.995", "warranty-claims 0.983"]);
+  eq(runGround({ q: "warranty-length", ground: true, k: 1 }).sources.map((d) => d.id), ["refund-policy"]);
+  const k2 = runGround({ q: "warranty-length", ground: true, k: 2 });
+  eq(k2.top.answer, "2 years");
+  near(k2.top.p, 0.976, 0.0005, "2 years");
+});
+test("grounding toy: no document passes the minimum score for the vacation question, and the abstain instruction makes I don't know 0.667", () => {
+  const r = runGround({ q: "vacation-days", ground: true, k: 4, instruct: true });
+  eq(r.sources.length, 0, "sources");
+  eq(r.top.answer, "I don't know");
+  near(r.top.p, 0.667, 0.0005, "I don't know");
+  eq(r.verdict, "abstain-right");
+});
+test("grounding toy: the answer probabilities add up to 1 for every question and setting", () => {
+  ["refund-window", "warranty-length", "vacation-days"].forEach((q) => [0.25, 1, 2].forEach((temp) => [false, true].forEach((g) => {
+    const r = runGround({ q, temp, ground: g, instruct: g, k: 2 });
+    near(r.candidates.reduce((s, c) => s + c.p, 0), 1, 1e-9, q + " T=" + temp);
+    near(r.pCorrect + r.pAbstain + r.pWrong, 1, 1e-9, q + " parts");
+  })));
+});
+test("ticket T-008 fixture data/grounding_faq.json equals the documents and questions of the lesson interactive", () => {
+  const html = A.tickets["T-008"].fields.files;
+  const m = html.match(/grounding_faq\.json<\/code>\.[\s\S]*?<pre><code>([\s\S]*?)<\/code><\/pre>/);
+  if (!m) throw new Error("fixture block not found in the files field");
+  eq(JSON.parse(m[1]), {
+    dimensions: grd.TOY.dimensions,
+    documents: grd.TOY.documents.map((d) => ({ id: d.id, title: d.title, text: d.text, vector: d.vector })),
+    queries: grd.TOY.questions.map((q) => ({ id: q.id, text: q.text, vector: q.vector }))
+  });
+});
+test("ticket T-008 converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
+  const md = A.md.ticket(A.tickets["T-008"]);
+  if (!md.startsWith("# T-008: ")) throw new Error("bad title line");
+  for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
+  if (/<[a-z]+[ >]/i.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+  if (/``/.test(md.replace(/```/g, ""))) throw new Error("an empty code span: a tag inside <code> was lost");
+});
+test("lesson 1.8 numbers: the T-008 Markdown contains the fixture and the acceptance numbers", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-008.md"), "utf8");
+  ["grounding_faq.json", "refund-policy 0.984", "warranty-claims 0.933", "(0.995)", "(0.983)", "no_sources", "HTTP 422"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

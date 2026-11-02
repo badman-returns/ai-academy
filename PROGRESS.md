@@ -13,6 +13,7 @@ Exported from the academy on 2026-11-02.
 | 1.5 | The transformer block | 1 of 3 | no |
 | 1.6 | Pretraining and post-training (SFT, RLHF, DPO) | 1 of 3 | no |
 | 1.7 | Context window and KV cache | 1 of 3 | no |
+| 1.8 | Hallucination and grounding | 1 of 3 | no |
 
 ## Mastery
 
@@ -64,6 +65,14 @@ Exported from the academy on 2026-11-02.
 | Each decode step reads all the weights and the whole cache | 0 (Not started) |  |
 | The API is stateless: each chat request sends the full history, so total input grows with the square of the turns | 0 (Not started) |  |
 | Ways to make the cache smaller: fewer KV heads, fewer bytes, paged memory | 0 (Not started) |  |
+| Hallucination: a fluent answer that the facts or the given sources do not support | 0 (Not started) |  |
+| Why it occurs: the model predicts a likely continuation, not a checked fact | 0 (Not started) |  |
+| Knowledge in the weights: compressed, with a cutoff, and without your private data | 0 (Not started) |  |
+| Grounding (RAG): retrieve the sources, put them in the prompt, then generate | 0 (Not started) |  |
+| The "I don't know" path: an instruction to abstain and a minimum retrieval score | 0 (Not started) |  |
+| Citations: each claim names its source, and code checks the source ids | 0 (Not started) |  |
+| Grounding reduces hallucination but does not remove it: misses, stale sources, unfaithful use | 0 (Not started) |  |
+| Low temperature makes answers consistent, not correct | 0 (Not started) |  |
 
 ## Tickets
 
@@ -76,6 +85,7 @@ Exported from the academy on 2026-11-02.
 | T-005 | not started |  |  |
 | T-006 | not started |  |  |
 | T-007 | not started |  |  |
+| T-008 | not started |  |  |
 
 ## Review
 
