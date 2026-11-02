@@ -624,5 +624,79 @@ test("lesson 1.8 numbers: the T-008 Markdown contains the fixture and the accept
   ["grounding_faq.json", "refund-policy 0.984", "warranty-claims 0.933", "(0.995)", "(0.983)", "no_sources", "HTTP 422"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
 });
 
+/* Lesson 1.9: the thinking tokens interactive and the lesson numbers */
+const thk = (A.ix || {})["l1-9-thinking"];
+const runThink = (o) => thk.compute(Object.assign({ task: 2, effort: 1, model: 0, maxTokens: 16000 }, o));
+test("thinking toy: the interactive uses the price table of app.js", () => {
+  eq(runThink({}).model, L.MODELS[0]);
+  eq(runThink({ model: 2 }).model, L.MODELS[2]);
+});
+test("thinking toy: thinking tokens are billed as output (refund: low $0.0146, medium $0.0326, high $0.0646 on Opus 5.5)", () => {
+  near(runThink({ effort: 0 }).cost.total, 0.0146, 1e-9, "low");
+  near(runThink({ effort: 1 }).cost.total, 0.0326, 1e-9, "medium");
+  const hi = runThink({ effort: 2 });
+  eq([hi.output, hi.stop, hi.outcome], [3050, "end_turn", "meets the bar"]);
+  near(hi.cost.total, 0.0646, 1e-9, "high (ticket T-009 criterion 6)");
+});
+test("thinking toy: thinking that fills max_tokens leaves no answer and still costs $0.0855", () => {
+  const r = runThink({ effort: 4, maxTokens: 4096 });
+  eq([r.thinking, r.answer, r.answerState, r.stop, r.outcome], [4096, 0, "none", "max_tokens", "no usable answer"]);
+  near(r.cost.total, 0.08552, 1e-9, "cost");
+  eq(runThink({ effort: 3, maxTokens: 4096 }).stop, "max_tokens", "xhigh (check l1-9-L2-a)");
+});
+test("thinking toy: when a short answer does not fit after the thinking, the answer is cut off", () => {
+  const r = runThink({ effort: 1, maxTokens: 1024 });
+  eq([r.thinking, r.answer, r.answerState, r.stop], [1024, 0, "none", "max_tokens"]);
+  const p = thk.compute({ task: 1, effort: 2, model: 0, maxTokens: 1500 });
+  eq([p.thinking, p.answer, p.answerState, p.stop], [1400, 100, "cut off", "max_tokens"]);
+});
+test("thinking toy: on the classify task, max effort costs 23.5 times low effort and gives no better outcome", () => {
+  const lo = runThink({ task: 0, effort: 0 }), hi = runThink({ task: 0, effort: 4 });
+  near(lo.cost.total, 0.0016, 1e-9, "low");
+  near(hi.cost.total, 0.0376, 1e-9, "max");
+  eq([lo.outcome, hi.outcome], ["meets the bar", "meets the bar"]);
+  eq(r3(hi.cost.total / lo.cost.total), 23.5);
+});
+test("thinking toy: the sweep marks the cheapest effort that meets the bar (refund high, policy medium, classify low)", () => {
+  eq(thk.sweep({ task: 2, model: 0, maxTokens: 4096 }).cheapest, 2, "refund");
+  eq(thk.sweep({ task: 1, model: 0, maxTokens: 16000 }).cheapest, 1, "policy");
+  eq(thk.sweep({ task: 0, model: 0, maxTokens: 16000 }).cheapest, 0, "classify");
+});
+test("thinking toy: more thinking never lowers the cost, for every task, model and max_tokens", () => {
+  [0, 1, 2].forEach((t) => [0, 1, 2].forEach((m) => thk.MAX_TOKENS.forEach((mx) => {
+    const rows = thk.sweep({ task: t, model: m, maxTokens: mx }).rows;
+    rows.forEach((r, i) => {
+      eq(r.thinking + r.answer, r.output, "output sum");
+      if (r.output > mx) throw new Error("output above max_tokens: task " + t + " max " + mx);
+      if (i && r.cost.total < rows[i - 1].cost.total) throw new Error("cost went down: task " + t + " model " + m + " max " + mx);
+    });
+  })));
+});
+test("lesson 1.9 numbers: the cost per correct answer is $0.0252 at low and $0.0721 at high, and the total with $0.50 per wrong answer is $20.56 and $11.06", () => {
+  const one = (out) => 900 * 4 / 1e6 + out * 20 / 1e6;
+  near(one(600), 0.0156, 1e-12, "low request");
+  near(one(3100), 0.0656, 1e-12, "high request");
+  near(100 * one(600) / 62, 0.02516, 1e-5, "low per correct (ticket T-009 criterion 7)");
+  near(100 * one(3100) / 91, 0.07209, 1e-5, "high per correct");
+  near(100 * one(600) + 38 * 0.5, 20.56, 1e-9, "low total");
+  near(100 * one(3100) + 9 * 0.5, 11.06, 1e-9, "high total");
+  near(L.cost(L.MODELS[0], 900, 3050).total, 0.0646, 1e-9, "T-009 criterion 6 with the app cost function");
+});
+test("lesson 1.9 numbers: the refund example of ticket T-009 gives $100", () => {
+  const share = (p) => 12 * p / (80 + 40);
+  eq(share(80) + share(40), 12, "coupon shares");
+  eq((80 - share(80)) + (40 - share(40)) * 0.5 + 10, 100);
+});
+test("lesson 1.9 numbers: the milestone 4 cost estimate is about $0.04 at the Haiku 5.5 prices", () => {
+  near(20 * (500 * L.MODELS[2].in + 4000 * L.MODELS[2].out) / 1e6, 0.041, 1e-9);
+});
+test("lesson 1.9 numbers: the T-009 Markdown contains the tests, the fixture and the acceptance numbers", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-009.md"), "utf8");
+  ["thinking.py", "reasoning_eval.json", "0.0646", "0.02516", "test_only_thinking_at_max_tokens_is_no_answer", "budget_tokens"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+  const m = A.tickets["T-009"].fields.files.match(/reasoning_eval\.json<\/code>, with two example questions[\s\S]*?<pre><code>([\s\S]*?)<\/code><\/pre>/);
+  if (!m) throw new Error("fixture block not found in the files field");
+  eq(JSON.parse(m[1]).map((q) => [q.kind, q.expected]), [["classify", "billing"], ["multi_step", "100"]]);
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

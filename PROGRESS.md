@@ -14,6 +14,7 @@ Exported from the academy on 2026-11-02.
 | 1.6 | Pretraining and post-training (SFT, RLHF, DPO) | 1 of 3 | no |
 | 1.7 | Context window and KV cache | 1 of 3 | no |
 | 1.8 | Hallucination and grounding | 1 of 3 | no |
+| 1.9 | Reasoning models and thinking tokens | 1 of 3 | no |
 
 ## Mastery
 
@@ -73,6 +74,13 @@ Exported from the academy on 2026-11-02.
 | Citations: each claim names its source, and code checks the source ids | 0 (Not started) |  |
 | Grounding reduces hallucination but does not remove it: misses, stale sources, unfaithful use | 0 (Not started) |  |
 | Low temperature makes answers consistent, not correct | 0 (Not started) |  |
+| Thinking tokens: output tokens that the model writes before its answer | 0 (Not started) |  |
+| Why thinking helps: more tokens give more computation and a place for intermediate results | 0 (Not started) |  |
+| Effort and adaptive thinking: how you control the amount of thinking | 0 (Not started) |  |
+| Thinking counts against max_tokens and is billed as output tokens | 0 (Not started) |  |
+| Thinking blocks in the response: display, safe answer extraction and multi-turn use | 0 (Not started) |  |
+| When thinking helps (multi-step tasks) and when it does not (lookup, classification, format) | 0 (Not started) |  |
+| Choose the effort with an eval: cost per correct answer and the cost of a wrong answer | 0 (Not started) |  |
 
 ## Tickets
 
@@ -86,6 +94,7 @@ Exported from the academy on 2026-11-02.
 | T-006 | not started |  |  |
 | T-007 | not started |  |  |
 | T-008 | not started |  |  |
+| T-009 | not started |  |  |
 
 ## Review
 

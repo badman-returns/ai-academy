@@ -39,7 +39,7 @@ window.ACADEMY.curriculum = [
       { id: "1.6", title: "Pretraining and post-training (SFT, RLHF, DPO)", status: "ready", covers: ["t1-pretraining", "t1-posttraining"] },
       { id: "1.7", title: "Context window and KV cache", status: "ready", covers: ["t1-context"] },
       { id: "1.8", title: "Hallucination and grounding", status: "ready", covers: ["t1-hallucination"] },
-      { id: "1.9", title: "Reasoning models and thinking tokens", status: "planned", covers: ["t1-reasoning"] }
+      { id: "1.9", title: "Reasoning models and thinking tokens", status: "ready", covers: ["t1-reasoning"] }
     ],
     resources: [
       { title: "Large Language Models explained briefly (8 min)", by: "3Blue1Brown", url: "https://www.youtube.com/watch?v=LPZh9BOjkQs" },

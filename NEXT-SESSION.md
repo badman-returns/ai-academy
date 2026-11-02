@@ -15,7 +15,7 @@ Read this file first. It tells you the state of the work and the tasks that rema
 
 - `academy/index.html`, `academy/styles.css`, `academy/app.js`, `academy/markdown.js`.
 - `academy/content/curriculum.js`: 11 topics, 75 original subtopics, 3 labeled additions.
-  Lessons 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7 and 1.8 have the status "ready".
+  Lessons 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8 and 1.9 have the status "ready".
 - `academy/content/lessons/`:
   - `01-how-llms-produce-text.js`: lesson 1.1 and ticket T-001.
   - `02-tokens-and-bpe.js`: lesson 1.2 and ticket T-002. It uses the "bpe" interactive in `app.js`.
@@ -29,18 +29,21 @@ Read this file first. It tells you the state of the work and the tasks that rema
     T-007 reuses the fixture `data/block_toy.json` of T-005.
   - `08-hallucination-grounding.js`: lesson 1.8 and ticket T-008. `08-ix.js` adds the "l1-8-grounding" interactive.
     Its documents and questions are also the fixture `data/grounding_faq.json` of T-008.
+  - `09-reasoning-models.js`: lesson 1.9 and ticket T-009. `09-ix.js` adds the "l1-9-thinking" interactive.
+    Its toy cost numbers are also the acceptance numbers of T-009.
   - `index.html` loads each of these files.
 - `academy/tools/generate.js`: writes the tickets and the handoff templates into `project/`.
-  It wrote `project/tickets/T-001.md` to `T-008.md` and `project/handoffs/T-001-handoff.md` to `T-008-handoff.md`.
+  It wrote `project/tickets/T-001.md` to `T-009.md` and `project/handoffs/T-001-handoff.md` to `T-009-handoff.md`.
   It does not overwrite a handoff file that exists.
-- `academy/tools/selftest.js`: 92 tests. All pass.
+- `academy/tools/selftest.js`: 103 tests. All pass.
   Run it with `node academy/tools/selftest.js` from this folder.
 - `README.md`, `PROGRESS.md` and the `project/` scaffold exist.
 
 ## What remains
 
-- The user's final review of lessons 1.1 to 1.8 and tickets T-001 to T-008 is pending.
-- The next lesson is 1.9, "Reasoning models and thinking tokens". Its status is "planned".
+- The user's final review of lessons 1.1 to 1.9 and tickets T-001 to T-009 is pending.
+- The next lesson is the first lesson of topic 2, "Prompting and structured output".
+  Topic 2 has no lessons in `curriculum.js` yet. The topic 2 plan adds them.
   Build it only when the user asks for it.
 - The UI redesign is done (2026-11-02). The user's final review of it is pending. Report: `site-check/REDESIGN-REPORT.md`.
 
