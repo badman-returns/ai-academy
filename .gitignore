@@ -1,0 +1,11 @@
+# Screenshots from site checks. They are large and the scripts make them again.
+site-check/
+# Local secrets. Only .env.example goes into git.
+.env
+.env.*
+!.env.example
+# Python and OS files.
+__pycache__/
+.venv/
+*.pyc
+.DS_Store

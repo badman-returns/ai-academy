@@ -1,0 +1,409 @@
+/*
+ * Page styles: review, tickets (list and single ticket), mastery, journal, interview and workflow.
+ * styles.css loads first. Use its tokens (for example var(--surface), var(--sp-4), var(--r-card)).
+ * Put only page-specific rules here. Put shared components in styles.css.
+ * Each rule starts with #view[data-route="..."], so it cannot change other pages.
+ */
+
+/* Reading width for the pages that are mostly one column of text. */
+#view[data-route="review"],
+#view[data-route="journal"],
+#view[data-route="interview"] { max-width: var(--reading-max); }
+#view[data-route="ticket"] { max-width: 860px; }
+
+/* Shared page header pattern (one rule set for each route). */
+#view[data-route="review"] .rv-head,
+#view[data-route="tickets"] .tk-head,
+#view[data-route="mastery"] .ms-head,
+#view[data-route="journal"] .jn-head,
+#view[data-route="interview"] .iv-head,
+#view[data-route="workflow"] .wf-head { margin: 0 0 var(--sp-6); }
+#view[data-route="review"] .rv-head h1,
+#view[data-route="tickets"] .tk-head h1,
+#view[data-route="mastery"] .ms-head h1,
+#view[data-route="journal"] .jn-head h1,
+#view[data-route="interview"] .iv-head h1,
+#view[data-route="workflow"] .wf-head h1 { margin: 0 0 var(--sp-2); }
+#view[data-route="review"] .rv-lead,
+#view[data-route="tickets"] .tk-lead,
+#view[data-route="mastery"] .ms-lead,
+#view[data-route="journal"] .jn-lead,
+#view[data-route="interview"] .iv-lead,
+#view[data-route="workflow"] .wf-lead { margin: 0; font-size: 17px; color: var(--text-secondary); max-width: 68ch; }
+
+/* Summary numbers: review stats and mastery summary. */
+#view[data-route="review"] .rv-stats,
+#view[data-route="mastery"] .ms-summary {
+  list-style: none; padding: 0; margin: 0 0 var(--sp-5);
+  display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+#view[data-route="review"] .rv-stats li,
+#view[data-route="mastery"] .ms-summary li {
+  margin: 0; padding: var(--sp-3) var(--sp-4); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-card); box-shadow: var(--shadow-sm);
+}
+#view[data-route="review"] .rv-stats b,
+#view[data-route="mastery"] .ms-summary b { display: block; font-size: 22px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+#view[data-route="review"] .rv-stats span,
+#view[data-route="mastery"] .ms-summary span { display: block; margin-top: 2px; font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
+
+#view[data-route="review"] .rv-stats b time { white-space: nowrap; font-size: clamp(17px, 4.6vw, 22px); }
+
+/* ============================================================ REVIEW */
+#view[data-route="review"] .rv-stats li.is-due { border-color: var(--accent-border); background: var(--accent-subtle); }
+#view[data-route="review"] .rv-stats li.is-due b { color: var(--accent-text); }
+#view[data-route="review"] .rv-stats li.is-overdue { border-color: var(--warning-border); background: var(--warning-subtle); }
+#view[data-route="review"] .rv-stats li.is-overdue b { color: var(--warning-text); }
+
+#view[data-route="review"] .rv-card { border-color: var(--accent-border); box-shadow: var(--shadow-md); margin: 0 0 var(--sp-8); }
+#view[data-route="review"] .rv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); font-size: 13px; }
+#view[data-route="review"] .rv-due { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-secondary); }
+#view[data-route="review"] .rv-due.is-overdue { color: var(--warning-text); }
+#view[data-route="review"] .rv-due.is-today { color: var(--accent-text); }
+#view[data-route="review"] .rv-topic { color: var(--text-secondary); }
+#view[data-route="review"] .rv-topic:hover { color: var(--accent-text); }
+#view[data-route="review"] .rv-kicker { margin: var(--sp-5) 0 var(--sp-1); font-size: var(--fs-xs); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+#view[data-route="review"] .rv-card .q { font-size: 22px; line-height: 1.4; margin: 0 0 var(--sp-4); letter-spacing: -.01em; }
+#view[data-route="review"] .rv-card textarea { min-height: 110px; }
+#view[data-route="review"] .rv-actions { margin-top: var(--sp-4); gap: var(--sp-3); }
+#view[data-route="review"] .rv-hint { font-size: 13px; color: var(--text-secondary); }
+#view[data-route="review"] .rv-answer { margin-top: var(--sp-4); }
+#view[data-route="review"] .rv-answer .rv-kicker { margin-top: 0; color: var(--success-text); }
+#view[data-route="review"] .rv-answer p:last-child { margin: 0; }
+#view[data-route="review"] .rv-rate { border: 0; padding: 0; margin: var(--sp-5) 0 0; min-width: 0; }
+#view[data-route="review"] .rv-rate legend { font-size: var(--fs-sm); font-weight: 600; padding: 0; margin-bottom: var(--sp-2); }
+#view[data-route="review"] .rv-rate-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); }
+#view[data-route="review"] .rv-rate-btn {
+  flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; gap: 2px;
+  padding: var(--sp-3); min-height: 72px; white-space: normal;
+}
+#view[data-route="review"] .rv-rate-name { font-weight: 600; font-size: var(--fs-sm); }
+#view[data-route="review"] .rv-rate-sub { font-size: var(--fs-xs); font-weight: 400; color: var(--text-secondary); line-height: 1.4; }
+#view[data-route="review"] .rv-rate-btn.primary .rv-rate-sub { color: inherit; opacity: .9; }
+#view[data-route="review"] .rv-empty { margin: 0 0 var(--sp-8); }
+
+#view[data-route="review"] .rv-schedule h2,
+#view[data-route="review"] .rv-how h2 { margin: var(--sp-8) 0 var(--sp-3); }
+#view[data-route="review"] .rv-groups { list-style: none; padding: 0; margin: 0; }
+#view[data-route="review"] .rv-group { margin: 0 0 var(--sp-4); padding: 0 0 0 var(--sp-4); border-left: 3px solid var(--border); }
+#view[data-route="review"] .rv-group.is-overdue { border-left-color: var(--warning); }
+#view[data-route="review"] .rv-group.is-today { border-left-color: var(--accent); }
+#view[data-route="review"] .rv-group-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2); margin: 0 0 var(--sp-1); font-size: var(--fs-body); font-variant-numeric: tabular-nums; }
+#view[data-route="review"] .rv-count { font-size: var(--fs-xs); font-weight: 500; color: var(--text-secondary); }
+#view[data-route="review"] .rv-items { list-style: none; padding: 0; margin: 0; }
+#view[data-route="review"] .rv-items li { margin: 0; padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); }
+#view[data-route="review"] .rv-items li:last-child { border-bottom: 0; }
+#view[data-route="review"] .rv-item-q { display: block; font-size: var(--fs-sm); }
+#view[data-route="review"] .rv-item-meta { display: block; font-size: var(--fs-xs); color: var(--text-secondary); margin-top: 2px; }
+#view[data-route="review"] .rv-steps { list-style: none; padding: 0; margin: 0 0 var(--sp-3); display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+#view[data-route="review"] .rv-steps li {
+  margin: 0; padding: 4px 12px; font-size: 13px; font-weight: 500; border-radius: var(--r-pill);
+  background: var(--surface); border: 1px solid var(--border); font-variant-numeric: tabular-nums;
+}
+#view[data-route="review"] .rv-steps li:last-child { border-style: dashed; color: var(--text-secondary); }
+
+/* =========================================================== TICKETS */
+#view[data-route="tickets"] .tk-summary { display: flex; align-items: center; gap: var(--sp-3); margin: 0 0 var(--sp-4); font-size: var(--fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; }
+#view[data-route="tickets"] .tk-summary .progress { flex: 1; max-width: 280px; }
+#view[data-route="tickets"] .tk-list { list-style: none; padding: 0; margin: 0 0 var(--sp-6); display: grid; gap: var(--sp-3); }
+#view[data-route="tickets"] .tk-item {
+  margin: 0; display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4) var(--sp-5);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+#view[data-route="tickets"] .tk-item:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+#view[data-route="tickets"] .tk-item.is-next { border-color: var(--accent-border); box-shadow: inset 3px 0 0 var(--accent), var(--shadow-sm); }
+#view[data-route="tickets"] .tk-item-main { flex: 1; min-width: 0; }
+#view[data-route="tickets"] .tk-item-title { margin: var(--sp-1) 0; font-size: var(--fs-h3); }
+#view[data-route="tickets"] .tk-item-title a { color: var(--text); text-decoration: none; }
+#view[data-route="tickets"] .tk-item-title a:hover { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+#view[data-route="tickets"] .tk-item.is-done .tk-item-title a { color: var(--text-secondary); }
+#view[data-route="tickets"] .tk-item-obj { margin: 0 0 var(--sp-2); font-size: var(--fs-sm); color: var(--text-secondary); max-width: 70ch; }
+#view[data-route="tickets"] .tk-next-label { font-size: var(--fs-xs); font-weight: 600; color: var(--accent-text); text-transform: uppercase; letter-spacing: .05em; }
+#view[data-route="tickets"] .tk-open { flex: none; min-width: 96px; }
+#view[data-route="tickets"] .tk-phases ol { margin-bottom: var(--sp-3); }
+
+/* Parts that the list and the single ticket share. */
+#view[data-route="tickets"] .tk-item-top,
+#view[data-route="ticket"] .tk-item-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: 0; }
+#view[data-route="tickets"] .tk-id,
+#view[data-route="ticket"] .tk-id { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+#view[data-route="tickets"] .tk-status,
+#view[data-route="ticket"] .tk-status { text-transform: capitalize; }
+#view[data-route="tickets"] .tk-item-meta,
+#view[data-route="ticket"] .tk-item-meta { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); margin: 0; font-size: 13px; color: var(--text-secondary); }
+
+/* ===================================================== SINGLE TICKET */
+#view[data-route="ticket"] .tk-back { margin: 0 0 var(--sp-3); font-size: var(--fs-sm); }
+#view[data-route="ticket"] .tk-back a { color: var(--text-secondary); text-decoration: none; }
+#view[data-route="ticket"] .tk-back a:hover { color: var(--accent-text); text-decoration: underline; }
+#view[data-route="ticket"] .tk-ticket-head { margin: 0 0 var(--sp-5); }
+#view[data-route="ticket"] .tk-ticket-head h1 { margin: var(--sp-2) 0; }
+#view[data-route="ticket"] .tk-panel {
+  display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr); gap: var(--sp-2) var(--sp-5); align-items: end;
+  padding: var(--sp-4) var(--sp-5); margin: 0 0 var(--sp-4);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm);
+}
+#view[data-route="ticket"] .tk-panel-status label { margin-top: 0; }
+#view[data-route="ticket"] .tk-panel-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+#view[data-route="ticket"] .tk-panel-note { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--text-secondary); }
+#view[data-route="ticket"] .tk-toc { margin: 0 0 var(--sp-6); }
+#view[data-route="ticket"] .tk-group,
+#view[data-route="ticket"] .tk-handoff { scroll-margin-top: 80px; margin: 0 0 var(--sp-8); }
+#view[data-route="ticket"] .tk-group > h2 {
+  margin: 0 0 var(--sp-3); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary);
+}
+#view[data-route="ticket"] .tk-field {
+  margin: 0 0 var(--sp-3); padding: var(--sp-4) var(--sp-5);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
+}
+#view[data-route="ticket"] .tk-field h3 { font-size: var(--fs-h3); margin-bottom: var(--sp-2); }
+#view[data-route="ticket"] .tk-field h3 .num {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: var(--r-pill);
+  background: var(--surface-2); border: 1px solid var(--border); font-variant-numeric: tabular-nums;
+}
+#view[data-route="ticket"] .tk-field-body > :first-child { margin-top: 0; }
+#view[data-route="ticket"] .tk-field-body > :last-child { margin-bottom: 0; }
+#view[data-route="ticket"] .tk-field-body li { margin: 4px 0; }
+/* The two fields that set "done": give them more weight. */
+#view[data-route="ticket"] .tk-f-acceptance,
+#view[data-route="ticket"] .tk-f-checklist { border-color: var(--accent-border); box-shadow: inset 3px 0 0 var(--accent); }
+#view[data-route="ticket"] .tk-f-objective { background: var(--surface-2); }
+#view[data-route="ticket"] .tk-handoff {
+  padding: var(--sp-5) var(--sp-6); background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-sm);
+}
+#view[data-route="ticket"] .tk-handoff > h2 { margin-top: 0; }
+#view[data-route="ticket"] .tk-h-field label small { display: block; font-weight: 400; color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
+#view[data-route="ticket"] .tk-handoff-actions { margin: var(--sp-4) 0; }
+#view[data-route="ticket"] .tk-handoff-actions { align-items: center; }
+#view[data-route="ticket"] .tk-handoff-actions label.btn { margin: 0; }
+/* The file input is visually hidden but the keyboard can reach it. Its label shows the focus ring. */
+#handoff-file:focus-visible + label[for="handoff-file"] { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* =========================================================== MASTERY */
+#view[data-route="mastery"] .ms-summary li { border-top: 3px solid var(--border-strong); }
+#view[data-route="mastery"] .ms-summary .ms-sum-info { border-top-color: var(--info); }
+#view[data-route="mastery"] .ms-summary .ms-sum-accent { border-top-color: var(--accent); }
+#view[data-route="mastery"] .ms-summary .ms-sum-warn { border-top-color: var(--warning); }
+#view[data-route="mastery"] .ms-summary .ms-sum-ok { border-top-color: var(--success); }
+#view[data-route="mastery"] .ms-scale-box { margin: 0 0 var(--sp-6); }
+#view[data-route="mastery"] .ms-scale { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--sp-2); }
+#view[data-route="mastery"] .ms-scale li { display: flex; gap: var(--sp-3); align-items: flex-start; margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+#view[data-route="mastery"] .ms-scale strong { display: block; color: var(--text); }
+#view[data-route="mastery"] .ms-n {
+  flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--accent-subtle); color: var(--accent-text); border: 1px solid var(--accent-border); font-weight: 600; font-size: 13px;
+}
+#view[data-route="mastery"] .ms-topic { margin: 0 0 var(--sp-8); }
+#view[data-route="mastery"] .ms-topic > h2 { margin: 0 0 var(--sp-3); }
+#view[data-route="mastery"] .ms-dist { list-style: none; padding: 0; margin: 0 0 var(--sp-5); display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--sp-1); }
+#view[data-route="mastery"] .ms-dist li {
+  margin: 0; padding: var(--sp-2); text-align: center; border-radius: var(--r-ctl);
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary);
+}
+#view[data-route="mastery"] .ms-dist li.has { background: var(--accent-subtle); border-color: var(--accent-border); color: var(--accent-text); }
+#view[data-route="mastery"] .ms-dist b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; color: var(--text); }
+#view[data-route="mastery"] .ms-dist li.has b { color: var(--accent-text); }
+#view[data-route="mastery"] .ms-dist span { display: block; font-size: 11px; line-height: 1.3; }
+#view[data-route="mastery"] .ms-lesson { margin: 0 0 var(--sp-5); }
+#view[data-route="mastery"] .ms-lesson-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); margin: 0 0 var(--sp-2); }
+#view[data-route="mastery"] .ms-lesson-head h3 { margin: 0; font-size: var(--fs-body); }
+#view[data-route="mastery"] .ms-lesson-head h3 a { color: var(--text); text-decoration: none; }
+#view[data-route="mastery"] .ms-lesson-head h3 a:hover { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+#view[data-route="mastery"] .ms-lesson-head a.tag { text-decoration: none; }
+#view[data-route="mastery"] .ms-concepts {
+  list-style: none; padding: 0; margin: 0; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm);
+}
+#view[data-route="mastery"] .ms-concept { margin: 0; padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border); }
+#view[data-route="mastery"] .ms-concept:last-child { border-bottom: 0; }
+#view[data-route="mastery"] .ms-c-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-1) var(--sp-4); }
+#view[data-route="mastery"] .ms-c-name { font-weight: 600; }
+#view[data-route="mastery"] .ms-c-level { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+#view[data-route="mastery"] .ms-meter { display: inline-grid; grid-template-columns: repeat(6, 14px); gap: 3px; }
+#view[data-route="mastery"] .ms-meter i { display: block; height: 8px; border-radius: 2px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-strong); }
+#view[data-route="mastery"] .ms-meter i.on { background: var(--accent); box-shadow: none; }
+#view[data-route="mastery"] .lvl-4 .ms-meter i.on,
+#view[data-route="mastery"] .lvl-5 .ms-meter i.on,
+#view[data-route="mastery"] .lvl-6 .ms-meter i.on { background: var(--success); }
+#view[data-route="mastery"] .ms-c-states { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin: var(--sp-2) 0 0; }
+#view[data-route="mastery"] .ms-c-more { display: flex; flex-wrap: wrap; gap: 0 var(--sp-2); margin-top: var(--sp-1); }
+#view[data-route="mastery"] .ms-c-more details { flex: 1 1 240px; min-width: 0; margin: var(--sp-1) 0 0; border-color: transparent; background: transparent; padding: 0 var(--sp-2); }
+#view[data-route="mastery"] .ms-c-more details[open] { flex-basis: 100%; border-color: var(--border); background: var(--surface-2); }
+#view[data-route="mastery"] .ms-c-more summary { min-height: 36px; padding: var(--sp-1) 0; font-size: 13px; font-weight: 500; color: var(--accent-text); }
+#view[data-route="mastery"] .ms-ev ul { margin: 0; padding-left: var(--sp-5); font-size: var(--fs-sm); }
+#view[data-route="mastery"] .ms-ev li { margin: 4px 0; }
+#view[data-route="mastery"] .ms-claim-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) auto; gap: var(--sp-3); align-items: end; }
+#view[data-route="mastery"] .ms-claim-row label { margin-top: 0; font-size: 13px; }
+#view[data-route="mastery"] .ms-later { margin: 0 0 var(--sp-8); }
+
+/* =========================================================== JOURNAL */
+#view[data-route="journal"] .jn-write {
+  padding: var(--sp-5) var(--sp-6); margin: 0 0 var(--sp-8); background: var(--surface);
+  border: 1px solid var(--accent-border); border-radius: var(--r-lg); box-shadow: var(--shadow-md);
+}
+#view[data-route="journal"] .jn-write h2 { margin: 0 0 var(--sp-1); }
+#view[data-route="journal"] .jn-prompts { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+#view[data-route="journal"] .jn-write select { max-width: 420px; }
+#view[data-route="journal"] .jn-write textarea { min-height: 200px; font-size: 16px; line-height: 1.65; }
+#view[data-route="journal"] .jn-write-actions { margin-top: var(--sp-3); justify-content: flex-end; }
+#view[data-route="journal"] .jn-list,
+#view[data-route="journal"] .jn-misbox { margin: 0 0 var(--sp-8); }
+#view[data-route="journal"] .jn-list > h2,
+#view[data-route="journal"] .jn-misbox > h2 { display: flex; align-items: baseline; gap: var(--sp-2); margin: 0 0 var(--sp-3); }
+#view[data-route="journal"] .jn-count {
+  display: inline-grid; place-items: center; min-width: 24px; height: 22px; padding: 0 7px; border-radius: var(--r-pill);
+  background: var(--surface-2); border: 1px solid var(--border); font-size: var(--fs-xs); font-weight: 600; color: var(--text-secondary); font-variant-numeric: tabular-nums;
+}
+#view[data-route="journal"] .jn-entry {
+  position: relative; margin: 0 0 var(--sp-3); padding: var(--sp-4) var(--sp-5);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
+}
+#view[data-route="journal"] .jn-entry-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); margin: 0 0 var(--sp-2); padding-right: 80px; font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+#view[data-route="journal"] .jn-entry-meta time { font-weight: 600; color: var(--text); }
+#view[data-route="journal"] .jn-entry-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
+#view[data-route="journal"] .jn-del { position: absolute; top: var(--sp-3); right: var(--sp-3); }
+#view[data-route="journal"] .jn-del:hover { color: var(--error-text); background: var(--error-subtle); }
+#view[data-route="journal"] .jn-mis-add { margin: 0 0 var(--sp-5); }
+#view[data-route="journal"] .jn-mis-add .row { margin-top: var(--sp-2); }
+#view[data-route="journal"] .jn-sub { display: flex; align-items: baseline; gap: var(--sp-2); margin: var(--sp-5) 0 var(--sp-2); font-size: var(--fs-body); }
+#view[data-route="journal"] .jn-mis-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--sp-2); }
+#view[data-route="journal"] .jn-mis {
+  margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-1) var(--sp-4); align-items: start;
+  padding: var(--sp-3) var(--sp-4); background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--warning); border-radius: var(--r-ctl);
+}
+#view[data-route="journal"] .jn-mis.is-resolved { border-left-color: var(--success); background: var(--surface-2); }
+#view[data-route="journal"] .jn-mis.is-resolved .jn-mis-text { color: var(--text-secondary); }
+#view[data-route="journal"] .jn-mis-text { margin: 0; grid-column: 1; overflow-wrap: anywhere; }
+#view[data-route="journal"] .jn-mis-meta { margin: 0; grid-column: 1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+#view[data-route="journal"] .jn-mis-actions { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: var(--sp-1); align-items: center; }
+
+/* ========================================================= INTERVIEW */
+#view[data-route="interview"] .iv-method { margin: 0 0 var(--sp-4); }
+#view[data-route="interview"] .iv-toc { margin: 0 0 var(--sp-6); }
+#view[data-route="interview"] .iv-lesson { scroll-margin-top: 80px; margin: 0 0 var(--sp-10); }
+#view[data-route="interview"] .iv-lesson > h2 { margin: 0 0 var(--sp-4); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
+#view[data-route="interview"] .iv-lesson-id { display: block; font-size: var(--fs-xs); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-text); margin-bottom: 2px; }
+#view[data-route="interview"] .iv-sub { margin: var(--sp-5) 0 var(--sp-2); font-size: var(--fs-sm); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); }
+#view[data-route="interview"] .iv-qs { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--sp-3); counter-reset: ivq; }
+#view[data-route="interview"] .iv-q {
+  counter-increment: ivq; margin: 0; padding: var(--sp-4) var(--sp-5); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm);
+}
+#view[data-route="interview"] .iv-q-text { margin: 0 0 var(--sp-2); font-size: 17px; font-weight: 600; line-height: 1.45; }
+#view[data-route="interview"] .iv-q-text::before { content: "Q" counter(ivq) "  "; white-space: pre; font-family: var(--mono); font-size: 13px; color: var(--text-secondary); }
+#view[data-route="interview"] .iv-reveal { margin: 0; background: var(--surface-2); border-color: transparent; }
+#view[data-route="interview"] .iv-reveal summary { min-height: 40px; padding: var(--sp-2) 0; font-size: var(--fs-sm); color: var(--accent-text); }
+#view[data-route="interview"] .iv-reveal[open] { background: var(--success-subtle); border-color: var(--success-border); }
+#view[data-route="interview"] .iv-reveal p { margin: 0; }
+#view[data-route="interview"] .iv-debugs { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
+#view[data-route="interview"] .iv-debug { min-width: 0; }
+#view[data-route="interview"] .iv-debug {
+  padding: var(--sp-4) var(--sp-5); background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--warning); border-radius: var(--r-card);
+}
+#view[data-route="interview"] .iv-debug h4 { margin: 0 0 var(--sp-2); }
+#view[data-route="interview"] .iv-debug pre { max-height: 260px; overflow: auto; }
+#view[data-route="interview"] .iv-hint { margin: var(--sp-1) 0; }
+#view[data-route="interview"] .iv-hint summary { min-height: 38px; padding: var(--sp-2) 0; font-size: var(--fs-sm); }
+#view[data-route="interview"] .iv-debug .iv-reveal { margin-top: var(--sp-2); }
+#view[data-route="interview"] .iv-teach {
+  margin-top: var(--sp-5); padding: var(--sp-4) var(--sp-5); border: 1px dashed var(--accent-border);
+  border-radius: var(--r-card); background: var(--accent-subtle);
+}
+#view[data-route="interview"] .iv-teach .iv-sub { margin-top: 0; color: var(--accent-text); }
+#view[data-route="interview"] .iv-teach p { margin: 0 0 var(--sp-2); }
+#view[data-route="interview"] .iv-teach .iv-teach-link { margin: 0; font-size: var(--fs-sm); font-weight: 600; }
+
+/* ========================================================== WORKFLOW */
+#view[data-route="workflow"] .wf-loop,
+#view[data-route="workflow"] .wf-modes { margin: 0 0 var(--sp-8); }
+#view[data-route="workflow"] .wf-loop > h2,
+#view[data-route="workflow"] .wf-modes > h2 { margin: 0 0 var(--sp-4); }
+#view[data-route="workflow"] .wf-flow {
+  list-style: none; padding: 0; margin: 0; display: grid; gap: var(--sp-3);
+  grid-template-columns: repeat(4, minmax(0, 1fr)); counter-reset: none;
+}
+#view[data-route="workflow"] .wf-step {
+  position: relative; margin: 0; display: flex; gap: var(--sp-3); padding: var(--sp-4);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm);
+}
+/* An arrow between steps in the same row. */
+#view[data-route="workflow"] .wf-step:not(:nth-child(4n))::after {
+  content: ""; position: absolute; top: 28px; right: calc(-1 * var(--sp-3) + 1px); width: 10px; height: 10px; z-index: 1;
+  border-top: 2px solid var(--accent-border); border-right: 2px solid var(--accent-border);
+  transform: translateX(50%) rotate(45deg); background: none;
+}
+#view[data-route="workflow"] .wf-step:last-child::after { content: none; }
+#view[data-route="workflow"] .wf-n {
+  flex: none; display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent-subtle); border: 1px solid var(--accent-border); color: var(--accent-text); font-weight: 700; font-size: 13px;
+}
+#view[data-route="workflow"] .wf-step > div { min-width: 0; }
+#view[data-route="workflow"] .wf-step h3 { margin: 2px 0 var(--sp-1); font-size: var(--fs-body); }
+#view[data-route="workflow"] .wf-step p { margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5; overflow-wrap: anywhere; }
+#view[data-route="workflow"] .wf-step code { font-size: 12px; overflow-wrap: anywhere; }
+#view[data-route="workflow"] .wf-step:first-child,
+#view[data-route="workflow"] .wf-step:last-child { border-color: var(--accent-border); }
+#view[data-route="workflow"] .wf-links { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: var(--sp-4) 0 0; }
+#view[data-route="workflow"] .wf-mode-grid { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+#view[data-route="workflow"] .wf-mode {
+  margin: 0; display: flex; flex-direction: column; padding: var(--sp-4) var(--sp-5);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-sm);
+}
+#view[data-route="workflow"] .wf-mode h3 { margin: 0 0 var(--sp-2); }
+#view[data-route="workflow"] .wf-mode dl { margin: 0; display: flex; flex-direction: column; flex: 1; }
+#view[data-route="workflow"] .wf-mode dt { margin: var(--sp-2) 0 2px; font-size: var(--fs-xs); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); }
+#view[data-route="workflow"] .wf-mode dd { margin: 0; font-size: var(--fs-sm); }
+#view[data-route="workflow"] .wf-prompt { margin: var(--sp-1) 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; }
+#view[data-route="workflow"] .wf-safety { margin-top: var(--sp-6); }
+
+/* ============================================================= PHONE */
+@media (max-width: 1100px) {
+  #view[data-route="workflow"] .wf-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #view[data-route="workflow"] .wf-step::after { content: none !important; }
+}
+@media (max-width: 820px) {
+  #view[data-route="review"] .rv-card .q { font-size: 19px; }
+  #view[data-route="review"] .rv-rate-grid { grid-template-columns: minmax(0, 1fr); }
+  #view[data-route="review"] .rv-rate-btn { min-height: 56px; }
+  #view[data-route="review"] .rv-actions .primary { width: 100%; }
+
+  #view[data-route="tickets"] .tk-item { flex-direction: column; align-items: stretch; padding: var(--sp-4); }
+  #view[data-route="tickets"] .tk-open { width: 100%; }
+
+  #view[data-route="ticket"] .tk-panel { grid-template-columns: minmax(0, 1fr); padding: var(--sp-4); }
+  #view[data-route="ticket"] .tk-panel-actions > * { flex: 1 1 100%; }
+  #view[data-route="ticket"] .tk-field { padding: var(--sp-4); }
+  #view[data-route="ticket"] .tk-handoff { padding: var(--sp-4); }
+  #view[data-route="ticket"] .tk-handoff-actions > * { flex: 1 1 100%; }
+
+  #view[data-route="mastery"] .ms-dist { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  #view[data-route="mastery"] .ms-claim-row { grid-template-columns: minmax(0, 1fr); }
+  #view[data-route="mastery"] .ms-c-head { flex-direction: column; align-items: flex-start; }
+
+  #view[data-route="journal"] .jn-write { padding: var(--sp-4); }
+  #view[data-route="journal"] .jn-write-actions .primary { width: 100%; }
+  #view[data-route="journal"] .jn-entry { padding: var(--sp-4); }
+  #view[data-route="journal"] .jn-mis { grid-template-columns: minmax(0, 1fr); }
+  #view[data-route="journal"] .jn-mis-actions { grid-column: 1; grid-row: auto; }
+
+  #view[data-route="interview"] .iv-q,
+  #view[data-route="interview"] .iv-debug,
+  #view[data-route="interview"] .iv-teach { padding: var(--sp-4); }
+  /* On a phone, wrap the evidence lines so that the full log line is visible. */
+  #view[data-route="interview"] .iv-debug pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  #view[data-route="workflow"] .wf-mode-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  #view[data-route="workflow"] .wf-flow { grid-template-columns: minmax(0, 1fr); }
+  /* On one column, a line joins the steps. */
+  #view[data-route="workflow"] .wf-step:not(:last-child)::before {
+    content: ""; position: absolute; left: calc(var(--sp-4) + 13px); bottom: calc(-1 * var(--sp-3) - 1px);
+    width: 2px; height: var(--sp-3); background: var(--accent-border);
+  }
+}
