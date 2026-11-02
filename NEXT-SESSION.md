@@ -46,7 +46,7 @@ Read this file first. It tells you the state of the work and the tasks that rema
   Build it only when the user asks for it.
 - The UI redesign is done (2026-11-02). The user's final review of it is pending. Report: `site-check/REDESIGN-REPORT.md`.
 - The topic 2 lesson plan (lessons 2.1 to 2.7, status "planned") is in `curriculum.js`. The user approved it on 2026-11-02.
-- FastAPI start: topic 3 (captain decided).
+- FastAPI start: topic 3 (the user decided).
 
 ## Rules
 
