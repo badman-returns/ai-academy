@@ -64,7 +64,7 @@ window.ACADEMY.curriculum = [
         why: "The master prompt lists message roles. The source list implies them under system prompt." }
     ],
     lessons: [
-      { id: "2.1", title: "Message roles and the stateless API", status: "planned", covers: ["t2-roles"] },
+      { id: "2.1", title: "Message roles and the stateless API", status: "ready", covers: ["t2-roles"] },
       { id: "2.2", title: "System prompts and few-shot examples", status: "planned", covers: ["t2-system"] },
       { id: "2.3", title: "Chain of thought: reason before you answer", status: "planned", covers: ["t2-system"] },
       { id: "2.4", title: "JSON output: validate and retry", status: "planned", covers: ["t2-structured"] },

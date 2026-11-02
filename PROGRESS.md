@@ -15,6 +15,7 @@ Exported from the academy on 2026-11-02.
 | 1.7 | Context window and KV cache | 1 of 3 | no |
 | 1.8 | Hallucination and grounding | 1 of 3 | no |
 | 1.9 | Reasoning models and thinking tokens | 1 of 3 | no |
+| 2.1 | Message roles and the stateless API | 1 of 3 | no |
 
 ## Mastery
 
@@ -81,6 +82,13 @@ Exported from the academy on 2026-11-02.
 | Thinking blocks in the response: display, safe answer extraction and multi-turn use | 0 (Not started) |  |
 | When thinking helps (multi-step tasks) and when it does not (lookup, classification, format) | 0 (Not started) |  |
 | Choose the effort with an eval: cost per correct answer and the cost of a wrong answer | 0 (Not started) |  |
+| The three roles: system, user and assistant | 0 (Not started) |  |
+| The top-level system field, and system messages in the middle of a conversation | 0 (Not started) |  |
+| The API is stateless: the code sends the full history in each request | 0 (Not started) |  |
+| Turn order: start with user, alternate, and know that consecutive same-role turns are combined | 0 (Not started) |  |
+| Assistant messages that you write: synthetic history, and why prefill returns error 400 on current models | 0 (Not started) |  |
+| The application owns the memory: storage, safe updates, trimming and the forget-history bug | 0 (Not started) |  |
+| Content blocks in the history: send the assistant content back unchanged | 0 (Not started) |  |
 
 ## Tickets
 
@@ -95,6 +103,7 @@ Exported from the academy on 2026-11-02.
 | T-007 | not started |  |  |
 | T-008 | not started |  |  |
 | T-009 | not started |  |  |
+| T-010 | not started |  |  |
 
 ## Review
 

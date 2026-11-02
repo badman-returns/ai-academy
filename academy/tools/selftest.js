@@ -717,5 +717,81 @@ test("lesson 1.9 numbers: the T-009 Markdown contains the tests, the fixture and
   eq(JSON.parse(m[1]).map((q) => [q.kind, q.expected]), [["classify", "billing"], ["multi_step", "100"]]);
 });
 
+/* Lesson 2.1: the conversation replay interactive, the lesson numbers and ticket T-010 */
+const conv = (A.ix || {})["l2-1-conversation"];
+const runConv = (o) => conv.compute(Object.assign({ turn: 4, forget: false, model: 0 }, o));
+test("conversation toy: the interactive uses the price table of app.js", () => {
+  eq(runConv({}).model, L.MODELS[0]);
+  eq(runConv({ model: 2 }).model, L.MODELS[2]);
+});
+test("conversation toy: with history, turn 4 sends the system prompt as the top-level field and all 7 messages", () => {
+  const r = runConv({});
+  eq(r.system.tokens, 400, "system tokens");
+  if (r.messages.some((m) => m.role === "system")) throw new Error("the system prompt is in the messages list");
+  eq(r.messages.map((m) => m.role), ["user", "assistant", "user", "assistant", "user", "assistant", "user"]);
+});
+test("conversation toy: every messages list starts with user, alternates roles and ends with user (no prefill), in both modes", () => {
+  [false, true].forEach((forget) => [1, 2, 3, 4].forEach((turn) => {
+    const roles = runConv({ turn, forget }).messages.map((m) => m.role);
+    if (roles[0] !== "user") throw new Error("turn " + turn + " starts with " + roles[0]);
+    if (roles[roles.length - 1] !== "user") throw new Error("turn " + turn + " ends with " + roles[roles.length - 1]);
+    roles.forEach((r, i) => { if (i && r === roles[i - 1]) throw new Error("two " + r + " turns in a row at turn " + turn); });
+  }));
+});
+test("conversation toy: input tokens per turn are 430, 560, 655, 760 with history and 430, 410, 415, 415 without", () => {
+  eq([1, 2, 3, 4].map((turn) => runConv({ turn }).inputTokens), [430, 560, 655, 760]);
+  eq([1, 2, 3, 4].map((turn) => runConv({ turn, forget: true }).inputTokens), [430, 410, 415, 415]);
+});
+test("conversation toy: without history, the request at turn 4 holds one message and the answer loses the order number", () => {
+  const f = runConv({ forget: true }), h = runConv({});
+  eq(f.messages.length, 1);
+  eq([h.answer.knowsContext, f.answer.knowsContext], [true, false]);
+  if (!/NW-4471/.test(h.answer.text)) throw new Error("the answer with history does not name the order");
+  if (/NW-4471/.test(f.answer.text)) throw new Error("the answer without history names the order");
+});
+test("conversation toy: four turns on Opus 5.5 cost $0.01662 with history and $0.01038 without", () => {
+  const h = conv.replay({ forget: false, model: 0 }), f = conv.replay({ forget: true, model: 0 });
+  eq([h.totals.input, h.totals.output], [2405, 350]);
+  eq([f.totals.input, f.totals.output], [1670, 185]);
+  near(h.totals.cost, 0.01662, 1e-12, "with history");
+  near(f.totals.cost, 0.01038, 1e-12, "without history");
+  near(conv.replay({ forget: false, model: 2 }).totals.cost, 0.0004155, 1e-12, "Haiku 5.5");
+});
+test("conversation toy: small costs keep four significant digits, so a Haiku request does not round to $0.0001", () => {
+  eq(conv.usd(0.0000535), "$0.0000535");
+  eq(conv.usd(0.0004155), "$0.0004155");
+  eq(conv.usd(0.01662), "$0.01662");
+  eq(conv.usd(1.5), "$1.50");
+});
+test("conversation toy: with history, each request adds exactly the previous answer and the new question", () => {
+  [2, 3, 4].forEach((turn) => {
+    const prev = runConv({ turn: turn - 1 }), cur = runConv({ turn });
+    eq(cur.messages.length, prev.messages.length + 2, "message count at turn " + turn);
+    eq(cur.inputTokens - prev.inputTokens, prev.answer.tokens + cur.messages[cur.messages.length - 1].tokens, "growth at turn " + turn);
+  });
+});
+test("lesson 2.1 is ready, covers t2-roles, links ticket T-010 and uses the conversation replay", () => {
+  const entry = A.curriculum.find((t) => t.id === "t2").lessons.find((l) => l.id === "2.1");
+  eq(entry.status, "ready");
+  const l = A.lessons["2.1"];
+  eq([l.topic, l.covers, l.tickets], ["t2", ["t2-roles"], ["T-010"]]);
+  const ix = l.levels.flatMap((lv) => lv.blocks).filter((b) => b.type === "interactive").map((b) => b.id);
+  eq(ix, ["l2-1-conversation"]);
+  eq([l.debugging.length, l.recall.length, l.interview.length, l.misconceptions.length, l.resources.length], [3, 7, 5, 7, 5]);
+});
+test("lesson 2.1 cites the Messages API pages for the stateless rule, prefill and the combined turns", () => {
+  const all = JSON.stringify(A.lessons["2.1"]);
+  ["platform.claude.com/docs/en/build-with-claude/working-with-messages", "platform.claude.com/docs/en/api/messages/create"]
+    .forEach((s) => { if (!all.includes(s)) throw new Error("missing source " + s); });
+  ["stateless", "400", "combined"].forEach((s) => { if (!all.includes(s)) throw new Error("missing " + s); });
+});
+test("lesson 2.1 numbers: the T-010 Markdown contains the chat command, the reuse of trim_history and the turn numbers", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-010.md"), "utf8");
+  ["# T-010: ", "python -m assistant.chat", "chat.py", "trim_history", "count_input_tokens", "430", "760",
+    "test_each_call_sends_the_full_history", "test_history_starts_with_user_and_alternates", "test_last_message_is_never_assistant"]
+    .forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+  eq([A.tickets["T-010"].lesson, A.tickets["T-010"].phase], ["2.1", 1]);
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

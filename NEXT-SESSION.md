@@ -15,7 +15,7 @@ Read this file first. It tells you the state of the work and the tasks that rema
 
 - `academy/index.html`, `academy/styles.css`, `academy/app.js`, `academy/markdown.js`.
 - `academy/content/curriculum.js`: 11 topics, 75 original subtopics, 3 labeled additions.
-  Lessons 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8 and 1.9 have the status "ready".
+  Lessons 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9 and 2.1 have the status "ready".
 - `academy/content/lessons/`:
   - `01-how-llms-produce-text.js`: lesson 1.1 and ticket T-001.
   - `02-tokens-and-bpe.js`: lesson 1.2 and ticket T-002. It uses the "bpe" interactive in `app.js`.
@@ -31,18 +31,20 @@ Read this file first. It tells you the state of the work and the tasks that rema
     Its documents and questions are also the fixture `data/grounding_faq.json` of T-008.
   - `09-reasoning-models.js`: lesson 1.9 and ticket T-009. `09-ix.js` adds the "l1-9-thinking" interactive.
     Its toy cost numbers are also the acceptance numbers of T-009.
+  - `10-roles-stateless.js`: lesson 2.1 and ticket T-010. `10-ix.js` adds the "l2-1-conversation" interactive.
+    Its toy token counts (430 to 760 input tokens in four turns) are also numbers in T-010.
   - `index.html` loads each of these files.
 - `academy/tools/generate.js`: writes the tickets and the handoff templates into `project/`.
-  It wrote `project/tickets/T-001.md` to `T-009.md` and `project/handoffs/T-001-handoff.md` to `T-009-handoff.md`.
+  It wrote `project/tickets/T-001.md` to `T-010.md` and `project/handoffs/T-001-handoff.md` to `T-010-handoff.md`.
   It does not overwrite a handoff file that exists.
-- `academy/tools/selftest.js`: 103 tests. All pass.
+- `academy/tools/selftest.js`: 116 tests. All pass.
   Run it with `node academy/tools/selftest.js` from this folder.
 - `README.md`, `PROGRESS.md` and the `project/` scaffold exist.
 
 ## What remains
 
-- The user's final review of lessons 1.1 to 1.9 and tickets T-001 to T-009 is pending.
-- The next lesson is 2.1, "Message roles and the stateless API". Its status is "planned".
+- The user's final review of lessons 1.1 to 1.9, lesson 2.1, tickets T-001 to T-009 and ticket T-010 is pending.
+- The next lesson is 2.2, "System prompts and few-shot examples". Its status is "planned".
   Build it only when the user asks for it.
 - The UI redesign is done (2026-11-02). The user's final review of it is pending. Report: `site-check/REDESIGN-REPORT.md`.
 - The topic 2 lesson plan (lessons 2.1 to 2.7, status "planned") is in `curriculum.js`. The user approved it on 2026-11-02.
