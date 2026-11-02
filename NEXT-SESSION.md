@@ -42,10 +42,11 @@ Read this file first. It tells you the state of the work and the tasks that rema
 ## What remains
 
 - The user's final review of lessons 1.1 to 1.9 and tickets T-001 to T-009 is pending.
-- The next lesson is the first lesson of topic 2, "Prompting and structured output".
-  Topic 2 has no lessons in `curriculum.js` yet. The topic 2 plan adds them.
+- The next lesson is 2.1, "Message roles and the stateless API". Its status is "planned".
   Build it only when the user asks for it.
 - The UI redesign is done (2026-11-02). The user's final review of it is pending. Report: `site-check/REDESIGN-REPORT.md`.
+- The topic 2 lesson plan (lessons 2.1 to 2.7, status "planned") is in `curriculum.js`. The user approved it on 2026-11-02.
+- FastAPI start: topic 3 (captain decided).
 
 ## Rules
 

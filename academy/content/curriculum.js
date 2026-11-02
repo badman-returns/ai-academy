@@ -63,7 +63,16 @@ window.ACADEMY.curriculum = [
       { id: "t2-roles", text: "Message roles (system, user, assistant) and why the API is stateless.", source: "addition",
         why: "The master prompt lists message roles. The source list implies them under system prompt." }
     ],
-    lessons: [], resources: [
+    lessons: [
+      { id: "2.1", title: "Message roles and the stateless API", status: "planned", covers: ["t2-roles"] },
+      { id: "2.2", title: "System prompts and few-shot examples", status: "planned", covers: ["t2-system"] },
+      { id: "2.3", title: "Chain of thought: reason before you answer", status: "planned", covers: ["t2-system"] },
+      { id: "2.4", title: "JSON output: validate and retry", status: "planned", covers: ["t2-structured"] },
+      { id: "2.5", title: "Tool schemas and schema-enforced output", status: "planned", covers: ["t2-structured"] },
+      { id: "2.6", title: "Prompt caching", status: "planned", covers: ["t2-caching"] },
+      { id: "2.7", title: "Prompt versioning and prompt tests", status: "planned", covers: ["t2-versioning"] }
+    ],
+    resources: [
       { title: "How I use LLMs", by: "Andrej Karpathy", url: "https://www.youtube.com/watch?v=EWvNQjAaOHw" },
       { title: "Anthropic courses (prompt engineering, tool use)", by: "Anthropic", url: "https://github.com/anthropics/courses" },
       { title: "DeepLearning.AI short courses", by: "DeepLearning.AI", url: "https://www.deeplearning.ai/short-courses/" }
