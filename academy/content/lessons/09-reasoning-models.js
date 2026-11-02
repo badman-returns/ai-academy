@@ -125,9 +125,9 @@ window.ACADEMY.lessons["1.9"] = {
       blocks: [
         { type: "html", html: `
           <h3>The controls in the API</h3>
-          <p>On the current Claude models, the model decides how much to think for each request. This is called <strong>adaptive thinking</strong>. You give it a guide with the <strong>effort</strong> setting:
+          <p>On the current Claude models, the model decides how much to think for each request. This is called <strong>adaptive thinking</strong>. On a simple request, the model can decide not to think. Then the response has no thinking block. You give it a guide with the <strong>effort</strong> setting:
           <code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code> or <code>max</code>. Effort controls the total token spend: the thinking, the length of the text, and the number of tool calls in agent work.</p>
-          <p><code>max_tokens</code> is different. It is a hard limit on all output tokens, the thinking included. The model does not plan its thinking around <code>max_tokens</code>. When the output reaches the limit, the API stops the response.</p>` },
+          <p><code>max_tokens</code> is different. It is a hard limit on all output tokens, the thinking included. When the output reaches the limit, the API stops the response.</p>` },
         { type: "code", lang: "python", code:
 `import anthropic
 
@@ -164,7 +164,7 @@ print(response.stop_reason, response.usage.output_tokens)` },
             <li>Older models used <code>thinking={"type": "enabled", "budget_tokens": N}</code>. The three models above reject <code>budget_tokens</code> with error 400. Use effort.</li>
             <li>The <code>display</code> field controls only what you see: <code>"omitted"</code> (the default) gives an empty thinking field, and <code>"summarized"</code> gives a readable summary. You never get the full thinking text. The billed tokens are the same for both settings.</li>
           </ul>
-          <p class="muted">Source: Claude API reference at the time of writing (2026-10). Check the Adaptive thinking and Effort pages in the resources before you rely on these details. They can change with a new model.</p>` },
+          <p class="muted">Source: the Claude API docs pages "Thinking", "Troubleshooting thinking" and "Effort" (in the resources), checked on 2026-11-02. Check them again before you rely on these details. They can change with a new model.</p>` },
         { type: "worked", title: "Worked example: the cost of thinking on one request",
           intro: "The refund task of the interactive: 900 input tokens and an answer of 250 tokens. Claude Opus 5.5: $4 per million input tokens and $20 per million output tokens (the price table of lesson 1.1). The thinking counts are toy numbers.",
           steps: [
@@ -192,7 +192,7 @@ print(response.stop_reason, response.usage.output_tokens)` },
             <li><strong>Do not use the thinking text in your program logic.</strong> It is a summary, it can change between runs, and it can be empty. Use the text block for the answer.</li>
             <li><strong>Send thinking blocks back unchanged.</strong> In a conversation with more than one turn (and in tool use, Topic 4), the next request contains the earlier assistant content. Keep the thinking blocks in it exactly as you got them. If you change or remove them, the API can return an error.</li>
           </ol>
-          <p>Streaming (lesson 1.1): with the default display <code>"omitted"</code>, the thinking block streams with empty text. A chat window then shows a long pause before the first word. Show a "thinking" indicator, or set <code>display</code> to <code>"summarized"</code> and show the summary.</p>` },
+          <p>Streaming (lesson 1.1): with the default display <code>"omitted"</code>, the thinking block streams with empty text. The model still thinks during that time, so a chat window shows a pause before the first word. Show a "thinking" indicator, or set <code>display</code> to <code>"summarized"</code> and show the summary. The "Thinking" docs page says that <code>"omitted"</code> starts the answer text sooner than <code>"summarized"</code>, because the server does not stream the thinking.</p>` },
         { type: "note", kind: "warn", title: "Do not set max_tokens from the answer length", html: `
           <p>A <code>max_tokens</code> value that worked well for a model without thinking can be much too small for a model with thinking. Set it from measurements: log <code>usage.output_tokens</code> for real requests at your effort level, and set the limit well above the largest value that you saw.
           Then alert when <code>stop_reason == "max_tokens"</code>. For very large output, the API needs streaming.</p>` }
@@ -207,7 +207,7 @@ print(response.stop_reason, response.usage.output_tokens)` },
             "A complete answer, because thinking tokens do not count against max_tokens."
           ],
           correct: 2,
-          explain: "Thinking counts against max_tokens, and the model does not plan around the limit. The response stops after 4,096 output tokens, all of them thinking. On Opus 5.5 with 900 input tokens, that costs $0.0855 for no answer. The interactive shows this case." },
+          explain: "Thinking counts against max_tokens. In this toy, the model wants 5,000 thinking tokens, so the response stops after 4,096 output tokens, all of them thinking. On Opus 5.5 with 900 input tokens, that costs $0.0855 for no answer. The interactive shows this case." },
         { id: "l1-9-L2-b", type: "mcq",
           q: "On Claude Opus 5.5, how do you ask for less thinking on a simple request?",
           options: [
@@ -244,10 +244,10 @@ print(response.stop_reason, response.usage.output_tokens)` },
           <p>This explains two facts that you see in production:</p>
           <ul>
             <li><strong>Thinking helps most on tasks like the training tasks:</strong> math, code, logic and plans with clear steps. It helps less on tasks with no clear steps, such as a short reply in a chat.</li>
-            <li><strong>Training rewards the answer, not true thinking text.</strong> So the thinking text is not a guaranteed record of the real reasons. Anthropic research (2025) found that reasoning models often did not mention a hint in the prompt that they used for their answer.</li>
+            <li><strong>Training rewards the answer, not true thinking text.</strong> So the thinking text is not a guaranteed record of the real reasons. A 2025 study (Chen et al., "Reasoning Models Don't Always Say What They Think", in the resources) found that reasoning models often did not mention a hint in the prompt that they used for their answer.</li>
           </ul>` },
         { type: "note", kind: "limit", title: "Diminishing returns and overthinking", html: `
-          <p>The effort documentation says that the max level can show diminishing returns, and that it can be prone to overthinking. More thinking costs more on every request, but it improves the result only up to some point.
+          <p>The effort documentation says this for Claude Opus 4.7: on most workloads, the max level adds much cost for a relatively small quality gain, and on some tasks it can lead to overthinking. For Claude Sonnet 5.5 and Claude Haiku 5.5, it says: use xhigh or max only where your evals show a quality gain. More thinking costs more on every request, but it improves the result only up to some point.
           The point is different for each task and each model. Find it with an eval, not with a guess.</p>` },
         { type: "html", html: `
           <h3>Choose the effort with an eval</h3>
@@ -344,7 +344,7 @@ print(round(total_cost(low, 0.50), 2), round(total_cost(high, 0.50), 2))` },
       answer: "The dashboard counts only the visible answer. usage.output_tokens also contains the thinking tokens, and you pay for them under every display setting. Fix: compute the cost from usage.input_tokens and usage.output_tokens of each response, as in T-001. Add a test that a response with a short answer and many output tokens gives the higher cost." },
     { id: "l1-9-dbg-3", title: "An old example returns error 400",
       symptom: "You copy an extended thinking example from an old blog post. Every request to claude-opus-5-5 now fails before the model starts.",
-      evidence: "anthropic.BadRequestError: Error code: 400 ... (the message names the thinking field)   request: thinking={\"type\": \"enabled\", \"budget_tokens\": 8000}",
+      evidence: "anthropic.BadRequestError: Error code: 400 ... \"thinking.type.enabled\" is not supported for this model. Use \"thinking.type.adaptive\" and \"output_config.effort\" to control thinking behavior.   request: thinking={\"type\": \"enabled\", \"budget_tokens\": 8000}",
       hints: [
         "Which thinking control does the old example use?",
         "Which control does Opus 5.5 accept for the amount of thinking?"
@@ -378,7 +378,7 @@ print(round(total_cost(low, 0.50), 2), round(total_cost(high, 0.50), 2))` },
   misconceptions: [
     { wrong: "Thinking tokens are free, because I do not see them.", right: "They are billed as output tokens under every display setting. usage.output_tokens includes them." },
     { wrong: "Thinking tokens do not count against max_tokens.", right: "They do. If the thinking uses all of max_tokens, the response has no text block." },
-    { wrong: "More effort always gives a better answer.", right: "It helps multi-step tasks up to some point. On simple tasks it adds cost and time with little gain, and at the max level the returns get smaller." },
+    { wrong: "More effort always gives a better answer.", right: "It helps multi-step tasks up to some point. On simple tasks it adds cost and time with little gain. The effort docs say: use xhigh or max only where your evals show a quality gain." },
     { wrong: "The thinking text shows exactly why the model gave its answer.", right: "It is a summary or empty, and research shows that the thinking can leave out reasons that the model used. Do not use it as proof." },
     { wrong: "A reasoning model is a different kind of machine.", right: "It is the same next-token loop. Post-training taught it to write useful thinking tokens before the answer." },
     { wrong: "budget_tokens is the way to control thinking on every Claude model.", right: "On the current models, use the effort setting. Claude Opus 5.5, Sonnet 5.5 and Haiku 5.5 reject budget_tokens with error 400." },
@@ -386,12 +386,13 @@ print(round(total_cost(low, 0.50), 2), round(total_cost(high, 0.50), 2))` },
   ],
 
   resources: [
-    { title: "Adaptive thinking", by: "Anthropic (Claude API docs)", kind: "Docs", url: "https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking",
+    { title: "Thinking", by: "Anthropic (Claude API docs)", kind: "Docs", url: "https://platform.claude.com/docs/en/build-with-claude/thinking",
       when: "Read after level 1, before level 2.",
-      why: "The reference for how the current models decide how much to think, and how to set the thinking field.",
+      why: "The reference for how to set the thinking field on each model, the display field, streaming, billing, and how to send thinking blocks back in tool use and in multi-turn conversations.",
       watchFor: [
-        "On which models is adaptive thinking the default, and what does each model do when you omit the thinking field?",
-        "What does the page say about the display field and the thinking text that you get back?"
+        "What does each current model do when you omit the thinking field?",
+        "How does the page say you are billed when you see only a summary or an empty field?",
+        "What must you do with thinking blocks when you send the conversation back to the API?"
       ] },
     { title: "Effort", by: "Anthropic (Claude API docs)", kind: "Docs", url: "https://platform.claude.com/docs/en/build-with-claude/effort",
       when: "Read with level 2.",
@@ -400,12 +401,12 @@ print(round(total_cost(low, 0.50), 2), round(total_cost(high, 0.50), 2))` },
         "Which level does the page recommend for coding and agent work, and which for simple tasks?",
         "What does the page say about the max level?"
       ] },
-    { title: "Extended thinking", by: "Anthropic (Claude API docs)", kind: "Docs", url: "https://platform.claude.com/docs/en/build-with-claude/extended-thinking",
-      when: "Read after level 2.",
-      why: "The thinking blocks in the response, streaming, billing, and how to use thinking with tool use and in multi-turn conversations.",
+    { title: "Troubleshooting thinking", by: "Anthropic (Claude API docs)", kind: "Docs", url: "https://platform.claude.com/docs/en/build-with-claude/thinking-troubleshooting",
+      when: "Read after level 2, with the debugging cases.",
+      why: "A table of the thinking values that each model rejects with error 400, the exact error messages, and the fixes for an empty thinking field and a stop at max_tokens.",
       watchFor: [
-        "How does the page say you are billed when you see only a summary?",
-        "What must you do with thinking blocks when you send the conversation back to the API?"
+        "Which thinking values does each current model reject with error 400?",
+        "What does the page say to do when the response stops with stop_reason \"max_tokens\"?"
       ] },
     { title: "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models", by: "Wei et al. (2022)", kind: "Paper, optional", url: "https://arxiv.org/abs/2201.11903",
       when: "Optional, after level 3. Read the abstract and look at the first figure.",
@@ -420,6 +421,13 @@ print(round(total_cost(low, 0.50), 2), round(total_cost(high, 0.50), 2))` },
       watchFor: [
         "Which kinds of tasks give the rewards, and how is the answer checked?",
         "What does the paper say about how the length of the thinking changes during training?"
+      ] },
+    { title: "Reasoning Models Don't Always Say What They Think", by: "Chen et al. (2025)", kind: "Paper, optional", url: "https://arxiv.org/abs/2505.05410",
+      when: "Optional, after level 3. Read the abstract.",
+      why: "The study behind the level 3 statement that the thinking text often does not mention a hint that the model used.",
+      watchFor: [
+        "How did the authors find out that a model used a hint?",
+        "How often did the models mention a hint that they used?"
       ] }
   ],
 
@@ -465,7 +473,7 @@ window.ACADEMY.tickets["T-009"] = {
         <li>T-001 done: <code>ask</code> streams an answer and prints the measurement line, and its tests pass.</li>
         <li>An Anthropic API key in the environment variable <code>ANTHROPIC_API_KEY</code>, for milestones 1 and 4 only.</li>
         <li>No new package. Use the <code>anthropic</code> SDK of T-001 and the Python standard library.</li>
-        <li>Read the docs pages "Adaptive thinking" and "Effort" (links in the lesson resources).</li>
+        <li>Read the docs pages "Thinking" and "Effort" (links in the lesson resources).</li>
       </ul>`,
     requirements: `
       <p><strong>Functional</strong></p>
