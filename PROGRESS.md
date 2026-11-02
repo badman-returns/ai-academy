@@ -11,6 +11,7 @@ Exported from the academy on 2026-11-02.
 | 1.3 | Embeddings and cosine similarity | 1 of 3 | no |
 | 1.4 | Attention: query, key and value | 1 of 3 | no |
 | 1.5 | The transformer block | 1 of 3 | no |
+| 1.6 | Pretraining and post-training (SFT, RLHF, DPO) | 1 of 3 | no |
 
 ## Mastery
 
@@ -48,6 +49,13 @@ Exported from the academy on 2026-11-02.
 | Pre-LN compared to post-LN, and the final layer norm | 0 (Not started) |  |
 | Parameters per block: about 12 × d_model² when d_ff = 4 × d_model | 0 (Not started) |  |
 | Where position information enters the model | 0 (Not started) |  |
+| Pretraining: self-supervised next-token prediction with the cross-entropy loss | 0 (Not started) |  |
+| A base model continues documents. A chat model follows instructions | 0 (Not started) |  |
+| SFT: the same loss on demonstration replies, with a loss mask on the prompt | 0 (Not started) |  |
+| Preference pairs and the reward model (Bradley-Terry) | 0 (Not started) |  |
+| RLHF: maximize the reward with a KL penalty to the reference model | 0 (Not started) |  |
+| DPO: learn from preference pairs without a separate reward model | 0 (Not started) |  |
+| Reward hacking, and why β keeps the model near the reference | 0 (Not started) |  |
 
 ## Tickets
 
@@ -58,6 +66,7 @@ Exported from the academy on 2026-11-02.
 | T-003 | not started |  |  |
 | T-004 | not started |  |  |
 | T-005 | not started |  |  |
+| T-006 | not started |  |  |
 
 ## Review
 

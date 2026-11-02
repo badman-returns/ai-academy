@@ -304,5 +304,109 @@ test("lesson 1.5 numbers: the T-005 Markdown contains the fixture and the accept
   ["block_toy.json", "[1.236, 0.829, -0.310, 2.958]", "3,145,728", "3,152,384"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
 });
 
+/* Lesson 1.6: the training interactive, the T-006 fixture and the lesson numbers */
+const trn = (A.ix || {})["l1-6-training"];
+const runTrain = (o) => trn.compute(Object.assign({ stage: "pref", steps: 10, beta: 1, flaw: false }, o));
+test("interactive l1-6-training is loaded as a function", () => {
+  if (typeof trn !== "function") throw new Error("l1-6-training is not loaded");
+});
+test("training toy: the base model gives the FAQ list the highest probability, 0.694, 0.094, 0.155, 0.057", () => {
+  const r = runTrain({ stage: "base" });
+  eq(r.probs.map(r3), [0.694, 0.094, 0.155, 0.057]);
+  eq(r.top, 0, "top reply");
+  near(r.humanScore, -1.18, 0.001, "human rating");
+});
+test("training toy: 10 SFT steps give 0.099, 0.811, 0.060, 0.031 and a loss of 0.210 (ticket T-006 criterion 6)", () => {
+  const r = runTrain({ stage: "sft" });
+  eq(r.probs.map(r3), [0.099, 0.811, 0.06, 0.031]);
+  near(r.demoLoss, 0.21, 0.001, "SFT loss");
+  near(r.humanScore, 1.423, 0.001, "human rating");
+});
+test("training toy: 0 SFT steps leave the base model unchanged, and more SFT steps always lower the SFT loss", () => {
+  eq(runTrain({ stage: "sft", steps: 0 }).probs, runTrain({ stage: "base" }).probs);
+  let last = Infinity;
+  for (let s = 0; s <= 30; s++) { const l = runTrain({ stage: "sft", steps: s }).demoLoss; if (!(l < last)) throw new Error("loss did not go down at step " + s); last = l; }
+});
+test("training toy: every stage gives probabilities that add up to 1 for every beta, with and without the flaw", () => {
+  trn.BETAS.forEach((beta) => [false, true].forEach((flaw) => ["base", "sft", "pref"].forEach((stage) => {
+    near(runTrain({ stage, beta, flaw }).probs.reduce((a, b) => a + b, 0), 1, 1e-9, stage + " beta " + beta + " flaw " + flaw);
+  })));
+});
+test("training toy: with the true reward model and beta 1, Helpful gets 0.980 and the KL from the SFT model is 0.151", () => {
+  const r = runTrain({});
+  eq(r.probs.map(r3), [0.002, 0.98, 0.016, 0.002]);
+  near(r.klFromSft, 0.151, 0.001, "KL");
+});
+test("training toy: a larger beta always keeps the tuned model nearer to the SFT model (smaller KL)", () => {
+  [false, true].forEach((flaw) => {
+    const k = trn.BETAS.map((beta) => runTrain({ beta, flaw }).klFromSft);
+    for (let i = 1; i < k.length; i++) if (!(k[i] < k[i - 1])) throw new Error("flaw " + flaw + ": KL did not fall at beta " + trn.BETAS[i]);
+  });
+});
+test("training toy: the flawed reward model with beta 0.25 gives Padded 0.995, the reward score goes up to 3.991 and the human rating falls to 0.507", () => {
+  const r = runTrain({ beta: 0.25, flaw: true });
+  near(r.probs[2], 0.995, 0.001, "Padded");
+  eq(r.top, 2, "top reply");
+  near(r.rewardScore, 3.991, 0.001, "reward score");
+  near(r.humanScore, 0.507, 0.001, "human rating");
+  if (!(r.humanScore < runTrain({ stage: "sft" }).humanScore)) throw new Error("human rating is not below the SFT model");
+});
+test("training toy: the flawed reward model with beta 1 still keeps Helpful on top at 0.646", () => {
+  const r = runTrain({ beta: 1, flaw: true });
+  near(r.probs[1], 0.646, 0.001, "Helpful");
+  eq(r.top, 1, "top reply");
+});
+test("training toy: preferencePolicy does not overflow at beta 0.001 and puts all probability on the highest reward", () => {
+  const p = trn.preferencePolicy([0.25, 0.25, 0.25, 0.25], [-2, 2, 4, -1], 0.001);
+  p.forEach((x, i) => { if (!Number.isFinite(x)) throw new Error("value " + i + " is not finite"); });
+  eq(p.map(r3), [0, 0, 1, 0]);
+});
+test("ticket T-006 fixture data/training_toy.json equals the numbers of the lesson interactive", () => {
+  const html = A.tickets["T-006"].fields.files;
+  const m = html.match(/training_toy\.json<\/code>[\s\S]*?<pre><code>([\s\S]*?)<\/code><\/pre>/);
+  if (!m) throw new Error("fixture block not found in the files field");
+  eq(JSON.parse(m[1]), trn.TOY);
+});
+test("ticket T-006 converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
+  const t = A.tickets["T-006"];
+  if (!t) throw new Error("T-006 missing");
+  const md = A.md.ticket(t);
+  if (!md.startsWith("# T-006: ")) throw new Error("bad title line");
+  for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
+  if (/<[a-z]+[ >]/i.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+});
+const nll = (p) => -Math.log(p);
+const sig = (x) => 1 / (1 + Math.exp(-x));
+test("lesson 1.6 numbers: the pretraining loss of 0.2, 0.5, 0.8 is 0.842 with perplexity 2.321, and a uniform guess over 50,000 tokens gives 10.82", () => {
+  const m = [0.2, 0.5, 0.8].map(nll).reduce((a, b) => a + b, 0) / 3;
+  near(m, 0.842, 0.0005, "mean loss");
+  near(Math.exp(m), 2.321, 0.0005, "perplexity");
+  near(Math.log(50000), 10.82, 0.005, "uniform");
+  near(nll(0.01), 4.605, 0.0005, "p = 0.01");
+  near(nll(0.25), 1.386, 0.0005, "check l1-6-L2-a");
+});
+test("lesson 1.6 numbers: the masked SFT loss is 0.602, the wrong denominator gives 0.301, and no mask gives 0.335", () => {
+  const p = [0.9, 0.95, 0.99, 0.9, 0.5, 0.25, 0.8, 0.9], mask = [0, 0, 0, 0, 1, 1, 1, 1];
+  const sum = p.reduce((s, x, i) => s + mask[i] * nll(x), 0);
+  near(sum / 4, 0.602, 0.0005, "masked");
+  near(sum / 8, 0.301, 0.0005, "debugging case 1");
+  near(p.map(nll).reduce((a, b) => a + b, 0) / 8, 0.335, 0.0005, "no mask");
+});
+test("lesson 1.6 numbers: the reward model, the KL optimum and the DPO loss match the worked examples", () => {
+  near(sig(1), 0.731, 0.0005, "sigma(1)");
+  near(nll(sig(1)), 0.313, 0.0005, "reward model loss");
+  near(nll(sig(-1)), 1.313, 0.0005, "swapped loss");
+  near(sig(2), 0.881, 0.0005, "check l1-6-L2-b");
+  eq(trn.preferencePolicy([0.5, 0.5], [1, 0], 1).map(r3), [0.731, 0.269], "beta 1");
+  eq(trn.preferencePolicy([0.5, 0.5], [1, 0], 0.5).map(r3), [0.881, 0.119], "beta 0.5");
+  eq(trn.preferencePolicy([0.5, 0.5], [1, 0], 10).map(r3), [0.525, 0.475], "beta 10");
+  near(nll(sig(0.1 * ((-10 + 12) - (-15 + 14)))), 0.554, 0.0005, "DPO loss");
+  near(nll(sig(0)), 0.693, 0.0005, "DPO loss at the start");
+});
+test("lesson 1.6 numbers: the T-006 Markdown contains the fixture and the acceptance numbers", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-006.md"), "utf8");
+  ["training_toy.json", "0.842", "2.321", "0.602", "0.313", "1.313", "[0.731, 0.269]", "0.554", "0.693", "[0.099, 0.811, 0.060, 0.031]", "0.995", "0.507"].forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
