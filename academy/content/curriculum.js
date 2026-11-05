@@ -91,7 +91,7 @@ window.ACADEMY.curriculum = [
       { id: "t3-failures", text: "When RAG fails: bad chunks, wrong embedding model, stale index, missing metadata filters.", source: "original" }
     ],
     lessons: [
-      { id: "3.1", title: "The RAG pipeline: build the index", status: "planned", covers: ["t3-pipeline"] },
+      { id: "3.1", title: "The RAG pipeline: build the index", status: "ready", covers: ["t3-pipeline"] },
       { id: "3.2", title: "Retrieve and answer with citations", status: "planned", covers: ["t3-pipeline"] },
       { id: "3.3", title: "Retrieval metrics: recall@k, precision@k, MRR, nDCG", status: "planned", covers: ["t3-metrics"] },
       { id: "3.4", title: "Chunking: size, sections and overlap", status: "planned", covers: ["t3-chunking"] },

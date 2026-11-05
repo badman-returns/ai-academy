@@ -1436,5 +1436,114 @@ test("lesson 2.7 files never address a person by a title", () => {
   });
 });
 
+/* Lesson 3.1: the index path interactive, the fixture hashes, the chunk counts and the lesson numbers */
+const pipe = (A.ix || {})["l3-1-pipeline"];
+const sha12b = (text) => require("crypto").createHash("sha256").update(text, "utf8").digest("hex").slice(0, 12);
+test("index toy: the interactive l3-1-pipeline is loaded with the fake embedder and the checked real model", () => {
+  if (typeof pipe !== "function" || pipe.mount !== pipe) throw new Error("l3-1-pipeline is not loaded");
+  eq(pipe.EMBEDDER, { model: "fake-keyword-v1", dim: 6 });
+  eq(pipe.REAL, { model: "BAAI/bge-small-en-v1.5", dim: 384, maxTokens: 512 });
+  eq(pipe.SIZES, [10, 20, 40, 80]);
+  eq(pipe.DEFAULT_SIZE, 20);
+});
+test("index toy: the corpus is in sorted path order and every stored hash is SHA-256 of the file text plus one newline", () => {
+  const paths = pipe.CORPUS.map((d) => d.path);
+  eq(paths, paths.slice().sort());
+  pipe.CORPUS.forEach((d) => eq(pipe.HASHES[d.path], sha12b(d.text + "\n"), d.path));
+  const refund = pipe.CORPUS.find((d) => d.path === "customer/refund-policy.md");
+  eq(sha12b(refund.text.replace("45 days", "30 days") + "\n"), "28945264e281", "edited refund policy");
+});
+test("index toy: the parse gives 10 sections and 152 words, and the refund policy has 30 and 19 words", () => {
+  const docs = pipe.CORPUS.map(pipe.parse);
+  eq(docs.reduce((n, d) => n + d.sections.length, 0), 10);
+  eq(docs.reduce((n, d) => n + d.words, 0), 152);
+  const r = docs.find((d) => d.id === "refund-policy");
+  eq(r.title, "Refund policy");
+  eq(r.sections.map((s) => [s.id, s.words.length]), [["refund-policy#return-window", 30], ["refund-policy#damaged-items", 19]]);
+});
+test("index toy: the sizes 10, 20, 40 and 80 give 17, 11, 6 and 5 chunks with the longest 10, 20, 40 and 49 words", () => {
+  eq(pipe.SIZES.map((s) => { const ix = pipe.buildIndex(s); return [ix.chunks.length, ix.crossing.length, ix.longest]; }),
+    [[17, 4, 10], [11, 5, 20], [6, 5, 40], [5, 5, 49]]);
+  pipe.SIZES.forEach((s) => pipe.buildIndex(s).chunks.forEach((c) => { if (c.id.split(":")[0] + ".md" !== c.doc.split("/").pop()) throw new Error(c.id + " crosses a document"); }));
+});
+test("index toy: at 20 words five chunks mix two sections, and refund-policy:1 keeps both sections in text order", () => {
+  const ix = pipe.buildIndex(20);
+  eq(ix.crossing, ["delivery-times:0", "refund-policy:1", "warranty-claims:0", "travel-expenses:0", "vpn-setup:0"]);
+  eq(ix.chunks.find((c) => c.id === "refund-policy:1").sections, ["refund-policy#return-window", "refund-policy#damaged-items"]);
+  eq(ix.chunks[0].id, "delivery-times:0");
+});
+test("index toy: the measurement line and the manifest of the fake run at 20 words", () => {
+  const ix = pipe.buildIndex(20);
+  eq(ix.line, "ingest docs=5 sections=10 chunks=11 words=152 chunk_words=20 embedder=fake-keyword-v1 dim=6 cost_usd=0");
+  eq(Object.keys(ix.manifest), ["embedder", "chunker", "documents", "chunks"]);
+  eq(ix.manifest.chunker, { kind: "fixed-words", chunk_words: 20 });
+  eq(Object.values(ix.manifest.documents).map((d) => d.chunks), [2, 3, 2, 2, 2]);
+  if (/20\d\d-\d\d-\d\d|"(date|time|built\w*|created\w*)":/i.test(JSON.stringify(ix.manifest))) throw new Error("the manifest has a date or a time");
+});
+test("index toy: the fake vector of refund-policy:0 is (0.913, 0.183, 0.365, 0, 0, 0) and every vector has length 1", () => {
+  const ix = pipe.buildIndex(20);
+  const c = ix.chunks.find((x) => x.id === "refund-policy:0");
+  eq(c.counts, [5, 1, 2, 0, 0, 0]);
+  eq(c.vector.map(r3), [0.913, 0.183, 0.365, 0, 0, 0]);
+  eq(ix.chunks[0].vector.map(r3), [0.11, 0, 0.994, 0, 0, 0]);
+  pipe.SIZES.forEach((s) => pipe.buildIndex(s).chunks.forEach((x) => near(Math.sqrt(pipe.dot(x.vector, x.vector)), 1, 1e-9, x.id)));
+});
+test("index toy: the probe ranks refund-policy:0 0.969, refund-policy:1 0.937 and refund-policy:2 0.577 at 20 words", () => {
+  eq(pipe.PROBE, "How many days do I have to return an unused tool?");
+  const top = pipe.search(pipe.buildIndex(20), pipe.PROBE, 3);
+  eq(top.map((h) => [h.chunk.id, r3(h.score)]), [["refund-policy:0", 0.969], ["refund-policy:1", 0.937], ["refund-policy:2", 0.577]]);
+  near(top[0].score, 13 / Math.sqrt(180), 1e-12);
+  near(top[1].score, 10 / Math.sqrt(114), 1e-12);
+  eq([10, 40, 80].map((s) => r3(pipe.search(pipe.buildIndex(s), pipe.PROBE, 1)[0].score)), [1, 0.995, 0.996]);
+});
+test("index toy: a text with no listed word raises the zero-vector error", () => {
+  let msg = "";
+  try { pipe.embed("Call 555-0100 for printer help."); } catch (e) { msg = e.message; }
+  if (!/zero vector/.test(msg)) throw new Error("no zero-vector error");
+});
+test("ticket T-017 converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
+  const md = A.md.ticket(A.tickets["T-017"]);
+  if (!md.startsWith("# T-017: ")) throw new Error("bad title line");
+  for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
+  if (/(^|[^\\])<[a-z]+[ >]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+});
+test("lesson 3.1 numbers: the T-017 Markdown holds the fixture files, the word lists, the hashes and the line of the interactive", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-017.md"), "utf8");
+  pipe.CORPUS.forEach((d) => { if (!md.includes("--- docs/" + d.path + " ---\n" + d.text + "\n")) throw new Error("the fixture text differs: " + d.path); });
+  Object.keys(pipe.WORDS).forEach((k) => {
+    const row = md.split("\n").find((l) => l.startsWith(k + ":"));
+    if (!row) throw new Error("word list missing: " + k);
+    eq(row.slice(k.length + 1).trim().split(/\s+/), pipe.WORDS[k], k);
+  });
+  eq(pipe.DIMS, Object.keys(pipe.WORDS));
+  const ix = pipe.buildIndex(20);
+  [ix.line, "28945264e281", "0.969", "0.937", "0.577", "17, 11, 6 and 5", "10, 20, 40 and 49", "BAAI/bge-small-en-v1.5", "384"]
+    .concat(Object.values(pipe.HASHES)).forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+});
+test("lesson 3.1 content: the lesson table and the worked example use the numbers of the interactive", () => {
+  const html = JSON.stringify(A.lessons["3.1"].levels);
+  pipe.SIZES.forEach((s) => {
+    const ix = pipe.buildIndex(s), top = pipe.search(ix, pipe.PROBE, 1)[0];
+    const row = "<tr><td>" + s + " words</td><td>" + ix.chunks.length + "</td><td>" + ix.crossing.length + "</td><td>" + ix.longest + " words</td><td>" + top.chunk.id + ", " + top.score.toFixed(3) + "</td></tr>";
+    if (!html.includes(JSON.stringify(row).slice(1, -1))) throw new Error("table row differs for " + s);
+  });
+  [pipe.buildIndex(20).line, "13 / √180 = <strong>0.969</strong>", "10 / √114 = 0.937", "f99d434e4406", "28945264e281"]
+    .forEach((s) => { if (!html.includes(JSON.stringify(s).slice(1, -1))) throw new Error("missing " + s); });
+});
+test("lesson 3.1 wiring: index.html loads 17-rag-index.js and 17-ix.js, and 3.1 is ready with ticket T-017", () => {
+  const html = fs.readFileSync(path.join(base, "index.html"), "utf8");
+  ["content/lessons/17-rag-index.js", "content/lessons/17-ix.js"].forEach((s) => { if (!html.includes('src="' + s + '"')) throw new Error(s + " not loaded"); });
+  eq(A.lessons["3.1"].tickets, ["T-017"]);
+  eq([A.tickets["T-017"].lesson, A.tickets["T-017"].phase], ["3.1", 2]);
+  eq(A.curriculum.flatMap((t) => t.lessons).find((l) => l.id === "3.1").status, "ready");
+  if (!JSON.stringify(A.lessons["3.1"].levels).includes('"id":"l3-1-pipeline"')) throw new Error("the interactive block is missing");
+});
+test("lesson 3.1 files never address a person by a title", () => {
+  ["17-rag-index.js", "17-ix.js"].forEach((f) => {
+    const s = fs.readFileSync(path.join(base, "content", "lessons", f), "utf8");
+    if (/captain/i.test(s)) throw new Error(f + " contains a direct address");
+  });
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
