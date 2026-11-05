@@ -70,13 +70,16 @@ Read this file first. It tells you the state of the work and the tasks that rema
 - The topic 3 lesson plan (lessons 3.1 to 3.10) is in `curriculum.js`. All ten lessons are "planned". The user approved the plan on 2026-11-05.
 - The topic 4 lesson plan (lessons 4.1 to 4.8) is in `curriculum.js`. All eight lessons are "planned". The user approved the plan on 2026-11-05.
 - The topic 5 lesson plan (lessons 5.1 to 5.8) is in `curriculum.js`. All eight lessons are "planned". The user approved the plan on 2026-11-05.
-- The topic 6 lesson plan (lessons 6.1 to 6.6) is proposed in `curriculum.js`. All six lessons are "planned". The plan waits for the user's review.
-- The topic 7 lesson plan (lessons 7.1 to 7.6) is proposed in `curriculum.js`. All six lessons are "planned". The plan waits for the user's review.
+- The topic 6 lesson plan (lessons 6.1 to 6.6) is in `curriculum.js`. All six lessons are "planned". The user approved the plan on 2026-11-05.
+- The topic 7 lesson plan (lessons 7.1 to 7.6) is in `curriculum.js`. All six lessons are "planned". The user approved the plan on 2026-11-05.
 - Setup decisions for topics 3 to 5 (the user decided on 2026-11-05): local embedding model (for example fastembed) and a local cross-encoder reranker, no paid embedding API; pgvector in Docker Compose for 3.5; GitHub Actions for the 5.8 eval gate; a local trace store for 5.1, with Langfuse or LangSmith optional.
-- The topic 8 lesson plan (lessons 8.1 to 8.12) is proposed in `curriculum.js`. All twelve lessons are "planned". The plan waits for the user's review.
-- The topic 9 lesson plan (lessons 9.1 to 9.8, SQL practice) is in `curriculum.js`. It is proposed and waits for review.
-- The topic 10 lesson plan (lessons 10.1 to 10.11, Python practice) is in `curriculum.js`. It is proposed and waits for review.
-- The topic 11 lesson plan (lessons 11.1 to 11.4, ML basics) is in `curriculum.js`. It is proposed and waits for review.
+- Decisions for topics 6 and 7 (the user decided on 2026-11-05): GPU lessons use a laptop ticket plus an optional GPU notebook; the distillation teacher is Claude in the prompt only; lesson 6.2 has an optional Ollama step; allow-lists and output checks stay two lessons; the 7.1 attack suite joins the 5.8 CI gate; lesson 7.6 uses a signed token instead of the 4.5 user-id header.
+- Decisions for topic 8 (the user decided on 2026-11-05): the 8.4 fallback is another Claude model; design documents are graded with the rubric and the structure script; lesson 8.8 stays its own lesson; the 8.5 semantic cache runs on ask only; the 7.4 guard on the 8.6 stream checks each sentence.
+- Decisions for topics 9 to 11 (the user decided on 2026-11-05): exercises go in a practice/ folder in the project repo; topic 9 shares the 3.5 Postgres Compose service; the driver is psycopg 3; topic 10 keeps 11 lessons; practice lessons have levels 1 and 2 only.
+- The topic 8 lesson plan (lessons 8.1 to 8.12) is in `curriculum.js`. All twelve lessons are "planned". The user approved the plan on 2026-11-05.
+- The topic 9 lesson plan (lessons 9.1 to 9.8, SQL practice) is in `curriculum.js`. The user approved the plan on 2026-11-05.
+- The topic 10 lesson plan (lessons 10.1 to 10.11, Python practice) is in `curriculum.js`. The user approved the plan on 2026-11-05.
+- The topic 11 lesson plan (lessons 11.1 to 11.4, ML basics) is in `curriculum.js`. The user approved the plan on 2026-11-05.
 
 ## Rules
 
