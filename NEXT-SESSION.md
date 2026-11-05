@@ -69,6 +69,7 @@ Read this file first. It tells you the state of the work and the tasks that rema
 - The topic 2 lesson plan (lessons 2.1 to 2.7) is in `curriculum.js`. All seven lessons are "ready". The user approved the plan on 2026-11-02.
 - FastAPI start: topic 3 (the user decided).
 - The topic 3 lesson plan (lessons 3.1 to 3.10, all "planned") is proposed in `curriculum.js` and waits for the user's review.
+- The topic 4 lesson plan (lessons 4.1 to 4.8, all "planned") is proposed in `curriculum.js`. It waits for the user's review.
 
 ## Rules
 
