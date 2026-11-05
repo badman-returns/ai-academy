@@ -73,6 +73,9 @@ Read this file first. It tells you the state of the work and the tasks that rema
 - The topic 6 lesson plan (lessons 6.1 to 6.6) is proposed in `curriculum.js`. All six lessons are "planned". The plan waits for the user's review.
 - The topic 7 lesson plan (lessons 7.1 to 7.6) is proposed in `curriculum.js`. All six lessons are "planned". The plan waits for the user's review.
 - Setup decisions for topics 3 to 5 (the user decided on 2026-11-05): local embedding model (for example fastembed) and a local cross-encoder reranker, no paid embedding API; pgvector in Docker Compose for 3.5; GitHub Actions for the 5.8 eval gate; a local trace store for 5.1, with Langfuse or LangSmith optional.
+- The topic 9 lesson plan (lessons 9.1 to 9.8, SQL practice) is in `curriculum.js`. It is proposed and waits for review.
+- The topic 10 lesson plan (lessons 10.1 to 10.11, Python practice) is in `curriculum.js`. It is proposed and waits for review.
+- The topic 11 lesson plan (lessons 11.1 to 11.4, ML basics) is in `curriculum.js`. It is proposed and waits for review.
 
 ## Rules
 

@@ -234,7 +234,17 @@ window.ACADEMY.curriculum = [
       { id: "t9-index", text: "Indexes and EXPLAIN ANALYZE.", source: "original" },
       { id: "t9-pg", text: "PostgreSQL extras: JSONB queries, and pgvector similarity queries (ORDER BY embedding <=> query LIMIT k).", source: "original" }
     ],
-    lessons: [], resources: [
+    lessons: [
+      { id: "9.1", title: "Joins: inner, left, self join and anti-join", status: "planned", covers: ["t9-joins"] },
+      { id: "9.2", title: "GROUP BY, HAVING and conditional aggregates", status: "planned", covers: ["t9-group"] },
+      { id: "9.3", title: "Window functions: ROW_NUMBER, RANK and DENSE_RANK", status: "planned", covers: ["t9-window"] },
+      { id: "9.4", title: "Window functions: LAG, LEAD, running totals and moving averages", status: "planned", covers: ["t9-window"] },
+      { id: "9.5", title: "CTEs and recursive CTEs", status: "planned", covers: ["t9-cte"] },
+      { id: "9.6", title: "Indexes and EXPLAIN ANALYZE", status: "planned", covers: ["t9-index"] },
+      { id: "9.7", title: "JSONB queries in PostgreSQL", status: "planned", covers: ["t9-pg"] },
+      { id: "9.8", title: "pgvector similarity queries in SQL", status: "planned", covers: ["t9-pg"] }
+    ],
+    resources: [
       { title: "SQL 50 study plan", by: "LeetCode", url: "https://leetcode.com/studyplan/top-sql-50/" },
       { title: "SQL interview questions", by: "DataLemur", url: "https://datalemur.com/" },
       { title: "PostgreSQL window functions tutorial", by: "PostgreSQL Tutorial", url: "https://www.postgresqltutorial.com/postgresql-window-function/" }
@@ -257,7 +267,20 @@ window.ACADEMY.curriculum = [
       { id: "t10-tooling", text: "Python project setup: virtual environment (venv), pyproject.toml, environment variables.", source: "addition",
         why: "Ticket T-001 needs it on day one. JavaScript developers know npm, not venv." }
     ],
-    lessons: [], resources: [
+    lessons: [
+      { id: "10.1", title: "Python project setup: venv, pyproject.toml and environment variables", status: "planned", covers: ["t10-tooling"] },
+      { id: "10.2", title: "pytest: fixtures and parametrize", status: "planned", covers: ["t10-pytest"] },
+      { id: "10.3", title: "Lists, dicts, sets, tuples, comprehensions and slicing", status: "planned", covers: ["t10-data"] },
+      { id: "10.4", title: "Functions: *args, **kwargs, closures and decorators", status: "planned", covers: ["t10-func"] },
+      { id: "10.5", title: "Type hints, dataclasses and Pydantic models", status: "planned", covers: ["t10-types"] },
+      { id: "10.6", title: "Errors and retries with backoff", status: "planned", covers: ["t10-retry"] },
+      { id: "10.7", title: "Generators and yield", status: "planned", covers: ["t10-gen"] },
+      { id: "10.8", title: "Context managers (with)", status: "planned", covers: ["t10-ctx"] },
+      { id: "10.9", title: "FastAPI: routes, request models and streaming responses", status: "planned", covers: ["t10-fastapi"] },
+      { id: "10.10", title: "NumPy: vectors, dot product and cosine similarity by hand", status: "planned", covers: ["t10-numpy"] },
+      { id: "10.11", title: "async and await: gather and semaphores", status: "planned", covers: ["t10-async"] }
+    ],
+    resources: [
       { title: "LeetCode easy and medium in Python (arrays, hash maps, strings, two pointers, sliding window)", by: "LeetCode", url: "https://leetcode.com/" },
       { title: "FastAPI tutorial", by: "FastAPI", url: "https://fastapi.tiangolo.com/tutorial/" }
     ]
@@ -270,7 +293,13 @@ window.ACADEMY.curriculum = [
       { id: "t11-softmax", text: "Softmax, loss, gradient descent (intuition only).", source: "original" },
       { id: "t11-classreg", text: "Classification compared to regression.", source: "original" }
     ],
-    lessons: [], resources: [
+    lessons: [
+      { id: "11.1", title: "Classification compared to regression", status: "planned", covers: ["t11-classreg"] },
+      { id: "11.2", title: "Softmax, loss and gradient descent", status: "planned", covers: ["t11-softmax"] },
+      { id: "11.3", title: "Train, validation and test sets: overfitting and underfitting", status: "planned", covers: ["t11-split"] },
+      { id: "11.4", title: "Thresholds: precision, recall and F1 for a product", status: "planned", covers: ["t11-prf"] }
+    ],
+    resources: [
       { title: "StatQuest with Josh Starmer (search the topic name)", by: "StatQuest", url: "https://www.youtube.com/@statquest" }
     ]
   }
