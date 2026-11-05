@@ -92,7 +92,7 @@ window.ACADEMY.curriculum = [
     ],
     lessons: [
       { id: "3.1", title: "The RAG pipeline: build the index", status: "ready", covers: ["t3-pipeline"] },
-      { id: "3.2", title: "Retrieve and answer with citations", status: "planned", covers: ["t3-pipeline"] },
+      { id: "3.2", title: "Retrieve and answer with citations", status: "ready", covers: ["t3-pipeline"] },
       { id: "3.3", title: "Retrieval metrics: recall@k, precision@k, MRR, nDCG", status: "planned", covers: ["t3-metrics"] },
       { id: "3.4", title: "Chunking: size, sections and overlap", status: "planned", covers: ["t3-chunking"] },
       { id: "3.5", title: "Vector search: pgvector, HNSW and IVF", status: "planned", covers: ["t3-vector"] },

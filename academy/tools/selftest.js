@@ -1545,5 +1545,101 @@ test("lesson 3.1 files never address a person by a title", () => {
   });
 });
 
+const askIx = (A.ix || {})["l3-2-ask"];
+const ask32 = (q, k, min) => askIx.compute({ q: q, k: k === undefined ? 3 : k, min: min === undefined ? 0.5 : min });
+const src32 = (r) => r.sources.map((s) => s.id + " " + s.score.toFixed(3));
+test("ask toy: the interactive l3-2-ask is loaded with the prompt rag-answer-v1 and the T-008 defaults", () => {
+  if (typeof askIx !== "function" || askIx.mount !== askIx) throw new Error("l3-2-ask is not loaded");
+  eq([askIx.PROMPT, askIx.KS, askIx.MINS, askIx.DEFAULT, askIx.IDK], ["rag-answer-v1", [1, 2, 3, 4, 5], [0.3, 0.5, 0.7], { q: "refund-window", k: 3, min: 0.5 }, "I don't know"]);
+  eq(askIx.QUESTIONS.map((q) => q.id), ["refund-window", "damaged", "express", "return-delivery", "vacation-days"]);
+  eq(askIx.QUESTIONS[0].text, pipe.PROBE);
+});
+test("lesson 3.2 numbers: the five questions give answered, answered, unsupported, abstained and no_sources at k = 3 and minimum 0.5", () => {
+  const want = {
+    "refund-window": ["answered", ["refund-policy:0 0.969", "refund-policy:1 0.937", "refund-policy:2 0.577"]],
+    "damaged": ["answered", ["refund-policy:2 0.949", "warranty-claims:0 0.894", "warranty-claims:1 0.800"]],
+    "express": ["unsupported", ["delivery-times:1 1.000", "delivery-times:0 0.994", "warranty-claims:1 0.894"]],
+    "return-delivery": ["abstained", ["refund-policy:1 0.927", "refund-policy:0 0.843", "refund-policy:2 0.816"]],
+    "vacation-days": ["no_sources", []]
+  };
+  Object.keys(want).forEach((q) => { const r = ask32(q); eq([r.status, src32(r)], want[q], q); });
+  const v = ask32("vacation-days");
+  eq([v.called, v.answer, v.ranked[0].score.toFixed(3)], [false, "I don't know", "0.447"]);
+  eq(ask32("damaged").answer, "We send a new tool at no cost [refund-policy:2].");
+  eq(ask32("express").answer, "Express delivery takes 1 working day [delivery-times:0]. Express delivery costs 9 euros [delivery-times:2].");
+  eq(ask32("return-delivery").answer, "I don't know.");
+});
+test("lesson 3.2 numbers: k and the minimum change the result as the lesson says", () => {
+  const d4 = ask32("damaged", 4);
+  eq([d4.status, src32(d4)[3], d4.answer], ["answered", "refund-policy:1 0.718", "Send a photo within 7 days [refund-policy:1]. We send a new tool at no cost [refund-policy:2]."]);
+  eq(d4.citations.find((c) => c.id === "refund-policy:1").sections, ["refund-policy#return-window", "refund-policy#damaged-items"]);
+  const e1 = ask32("express", 1);
+  eq([e1.status, src32(e1), e1.sources[0].text, e1.answer], ["unsupported", ["delivery-times:1 1.000"], "the next working day.", "Express delivery costs 9 euros [delivery-times:2]."]);
+  const v3 = ask32("vacation-days", 3, 0.3);
+  eq([v3.status, src32(v3)], ["abstained", ["delivery-times:1 0.447", "delivery-times:0 0.444", "warranty-claims:1 0.400"]]);
+  const r7 = ask32("refund-window", 3, 0.7);
+  eq([r7.status, r7.sources.length], ["answered", 2]);
+});
+test("lesson 3.2 numbers: citations carry the document path and the sections, and an invented id has doc null", () => {
+  eq(ask32("refund-window").response.citations, [{ id: "refund-policy:0", doc: "customer/refund-policy.md", sections: ["refund-policy#return-window"] }]);
+  eq(ask32("express").response.citations, [
+    { id: "delivery-times:0", doc: "customer/delivery-times.md", sections: ["delivery-times#standard-delivery", "delivery-times#express-delivery"] },
+    { id: "delivery-times:2", doc: null, sections: [] }]);
+  eq(ask32("express").response.sources, [{ id: "delivery-times:1", score: 1 }, { id: "delivery-times:0", score: 0.994 }, { id: "warranty-claims:1", score: 0.894 }]);
+  eq(pipe.buildIndex(20).chunks.filter((c) => c.id.startsWith("delivery-times:")).map((c) => c.id), ["delivery-times:0", "delivery-times:1"]);
+});
+test("lesson 3.2 numbers: GET /health and the prompt follow the T-008 format with rag-answer-v1", () => {
+  const r = ask32("refund-window");
+  eq(r.health, { status: "ok", embedder: "fake-keyword-v1", dim: 6, chunks: 11, prompt: "rag-answer-v1" });
+  eq(r.system, askIx.SYSTEM_LINES.join("\n"));
+  if (!/^<source id="refund-policy:0">\n[\s\S]*<\/source>\n[\s\S]*\nQuestion: How many days/.test(r.user)) throw new Error("bad user message: " + r.user);
+  eq(ask32("express").system, r.system);
+});
+test("lesson 3.2 citations: the pattern accepts chunk ids and document ids, in order, with no duplicates", () => {
+  eq(askIx.parseCitations("A [refund-policy:0]. B [refund-policy]. C [refund-policy:0]. D [Bad:x]."), ["refund-policy:0", "refund-policy"]);
+  eq(askIx.parseCitations("I don't know."), []);
+});
+test("ticket T-018 converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
+  const md = A.md.ticket(A.tickets["T-018"]);
+  if (!md.startsWith("# T-018: ")) throw new Error("bad title line");
+  for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
+  if (/(^|[^\\])<[a-z]+[ >]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+});
+test("lesson 3.2 numbers: the T-018 Markdown holds the fake replies, the health JSON and the numbers of the interactive", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-018.md"), "utf8");
+  askIx.QUESTIONS.forEach((q) => { if (!md.includes(q.text)) throw new Error("question missing: " + q.id); });
+  ["damaged", "express", "return-delivery", "refund-window"].forEach((q) => { const a = ask32(q).answer; if (!md.includes('"' + a + '"')) throw new Error("reply missing: " + q); });
+  ['{"status": "ok", "embedder": "fake-keyword-v1", "dim": 6, "chunks": 11, "prompt": "rag-answer-v1"}', "0.969", "0.937", "0.577", "0.447", "0.444", "0.400",
+   "0.927", "0.843", "0.816", "0.949", "0.894", "0.800", "0.718", "0.994", "\\[([a-z0-9-]+(?::[0-9]+)?)\\]", "version: rag-answer-v1", "$0.0003"]
+    .forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+  near(5 * (300 * 0.10 + 50 * 0.50) / 1e6, 0.000275, 1e-12, "milestone 4 cost");
+});
+test("lesson 3.2 content: the lesson table and the prompt file use the numbers and the rules of the interactive", () => {
+  const html = JSON.stringify(A.lessons["3.2"].levels);
+  const has = (s) => { if (!html.includes(JSON.stringify(s).slice(1, -1))) throw new Error("missing " + s); };
+  askIx.QUESTIONS.forEach((q) => {
+    const r = ask32(q.id);
+    const cell = r.sources.length ? src32(r).join(", ") : "none: the best score is " + r.ranked[0].score.toFixed(3);
+    has("<tr><td>" + q.label + "</td><td>" + cell + "</td>");
+  });
+  has("version: rag-answer-v1\n\n" + askIx.SYSTEM_LINES.join("\n"));
+  ["refund-policy:1</code>, which has rank 4 with 0.718", "Express delivery costs 9 euros [delivery-times:2].", "\"the next working day.\""].forEach(has);
+});
+test("lesson 3.2 wiring: index.html loads 18-rag-ask.js and 18-ix.js, and 3.2 is ready with ticket T-018", () => {
+  const html = fs.readFileSync(path.join(base, "index.html"), "utf8");
+  ["content/lessons/18-rag-ask.js", "content/lessons/18-ix.js"].forEach((s) => { if (!html.includes('src="' + s + '"')) throw new Error(s + " not loaded"); });
+  if (html.indexOf("18-ix.js") > html.indexOf('src="markdown.js"') || html.indexOf("18-rag-ask.js") < html.indexOf("17-ix.js")) throw new Error("bad script order");
+  eq(A.lessons["3.2"].tickets, ["T-018"]);
+  eq([A.tickets["T-018"].lesson, A.tickets["T-018"].phase], ["3.2", 2]);
+  eq(A.curriculum.flatMap((t) => t.lessons).find((l) => l.id === "3.2").status, "ready");
+  if (!JSON.stringify(A.lessons["3.2"].levels).includes('"id":"l3-2-ask"')) throw new Error("the interactive block is missing");
+});
+test("lesson 3.2 files never address a person by a title", () => {
+  ["18-rag-ask.js", "18-ix.js"].forEach((f) => {
+    const s = fs.readFileSync(path.join(base, "content", "lessons", f), "utf8");
+    if (/captain/i.test(s)) throw new Error(f + " contains a direct address");
+  });
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
