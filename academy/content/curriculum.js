@@ -144,7 +144,17 @@ window.ACADEMY.curriculum = [
       { id: "t5-tracing", text: "Tracing each request: prompt, tool calls, tokens, latency, cost (tools such as Langfuse or LangSmith).", source: "original" },
       { id: "t5-errors", text: "Error analysis: read real failures, group them, fix the largest group first.", source: "original" }
     ],
-    lessons: [], resources: [
+    lessons: [
+      { id: "5.1", title: "Trace each request: spans, tokens, latency and cost", status: "planned", covers: ["t5-tracing"] },
+      { id: "5.2", title: "Golden datasets from real questions", status: "planned", covers: ["t5-golden"] },
+      { id: "5.3", title: "Error analysis: read, group and fix the largest group", status: "planned", covers: ["t5-errors"] },
+      { id: "5.4", title: "Code checks: citation accuracy and task success", status: "planned", covers: ["t5-judge", "t5-metrics"] },
+      { id: "5.5", title: "LLM-as-judge: faithfulness and answer relevance", status: "planned", covers: ["t5-judge", "t5-metrics"] },
+      { id: "5.6", title: "Make the judge reliable: compare with human labels", status: "planned", covers: ["t5-judge"] },
+      { id: "5.7", title: "Compare two runs: prove that a change is better", status: "planned", covers: ["t5-metrics"] },
+      { id: "5.8", title: "Regression evals in CI", status: "planned", covers: ["t5-ci"] }
+    ],
+    resources: [
       { title: "Your AI Product Needs Evals", by: "Hamel Husain", url: "https://hamel.dev/blog/posts/evals/" },
       { title: "Patterns for Building LLM-based Systems and Products", by: "Eugene Yan", url: "https://eugeneyan.com/writing/llm-patterns/" }
     ]
