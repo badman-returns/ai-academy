@@ -1641,5 +1641,109 @@ test("lesson 3.2 files never address a person by a title", () => {
   });
 });
 
+const metIx = (A.ix || {})["l3-3-metrics"];
+const f3 = (x) => x.toFixed(3);
+const row33 = (r) => [r.k, f3(r.recall), f3(r.precision), f3(r.mrr), f3(r.ndcg)];
+const q33 = (id) => metIx.QUESTIONS.find((q) => q.id === id);
+test("metrics toy: the interactive l3-3-metrics is loaded with 8 questions, the k values and the gate k of 3", () => {
+  if (typeof metIx !== "function" || metIx.mount !== metIx) throw new Error("l3-3-metrics is not loaded");
+  eq([metIx.KS, metIx.GATE_K, metIx.SIZE, metIx.CANDIDATES, metIx.DEFAULT], [[1, 3, 5, 10], 3, 20, [10, 40], { q: "q02", k: 3, cand: 10 }]);
+  eq(metIx.QUESTIONS.map((q) => q.id), ["q01", "q02", "q03", "q04", "q05", "q06", "q07", "q08"]);
+  eq(metIx.QUESTIONS.filter((q) => q.must_pass).map((q) => q.id), ["q01", "q02"]);
+  eq(metIx.sections().length, 10);
+  metIx.QUESTIONS.forEach((q) => Object.keys(q.relevant).forEach((s) => { if (!metIx.sections().includes(s)) throw new Error(q.id + " labels an unknown section " + s); }));
+});
+test("lesson 3.3 numbers: the hand case gives 0.500, 0.500, 0.500 and nDCG@4 0.643, and no labels is an error", () => {
+  const R = [["a"], ["b"], ["c"], ["d"]], L = { b: 2, d: 1 };
+  eq([metIx.recallAtK(R, L, 2), metIx.precisionAtK(R, L, 2), metIx.reciprocalRank(R, L, 4)], [0.5, 0.5, 0.5]);
+  eq(f3(metIx.ndcgAtK([0, 2, 0, 1], [2, 1, 0, 0], 4)), "0.643");
+  eq([f3(metIx.dcg([0, 2, 0, 1], 4)), f3(metIx.dcg([2, 1, 0, 0], 4))], ["1.693", "2.631"]);
+  let threw = false; try { metIx.recallAtK(R, {}, 2); } catch (e) { threw = true; }
+  if (!threw) throw new Error("recallAtK must throw with no labels");
+  eq(f3(metIx.dcg([2, 1, 1], 3) / metIx.dcg([2, 1], 3)), "1.190");
+});
+test("lesson 3.3 numbers: q02 at k = 3 has recall, precision and RR 1.000 and nDCG 0.832 (3.131 / 3.762)", () => {
+  const q = q33("q02"), d = metIx.detail(q, q.relevant, 3);
+  eq(d.results.slice(0, 5).map((r) => r.id + " " + r.gain), ["refund-policy:2 2", "warranty-claims:0 1", "warranty-claims:1 1", "refund-policy:1 2", "delivery-times:1 0"]);
+  eq(d.ideal.slice(0, 5), [2, 2, 1, 1, 0]);
+  eq([d.recall, d.precision, d.rr, f3(d.ndcg)], [1, 1, 1, "0.832"]);
+  eq([f3(d.dcgTerms.reduce((a, b) => a + b, 0)), f3(d.idcgTerms.reduce((a, b) => a + b, 0))], ["3.131", "3.762"]);
+  eq(metIx.detail(q, q.relevant, 1).recall, 0.5);
+  [1, 3, 5, 10].forEach((k) => { if (metIx.detail(q, q.relevant, k).ndcg > 1) throw new Error("nDCG above 1 at k = " + k); });
+  eq(f3(metIx.detail(q, { "refund-policy#damaged-items": 2, "warranty-claims#how-to-claim": 2 }, 3).ndcg), "1.000");
+});
+test("lesson 3.3 numbers: q06 starts with the fragment, so RR is 0 at k = 1 and 0.500 at k = 3; q01 counts one section once", () => {
+  const q = q33("q06"), d1 = metIx.detail(q, q.relevant, 1), d3 = metIx.detail(q, q.relevant, 3);
+  eq([d1.results[0].id, d1.results[0].score.toFixed(3)], ["travel-expenses:1", "1.000"]);
+  eq([d1.recall, d1.precision, d1.rr, d1.ndcg], [0, 0, 0, 0]);
+  eq([d3.recall, f3(d3.precision), d3.rr, f3(d3.ndcg)], [1, "0.333", 0.5, "0.631"]);
+  const p = q33("q01"), d = metIx.detail(p, p.relevant, 3);
+  eq([d.recall, f3(d.precision), f3(d.ndcg)], [1, "0.667", "1.000"]);
+});
+test("lesson 3.3 numbers: the eval rows at 20, 10 and 40 words and the skipped questions", () => {
+  const e20 = metIx.evaluate(20), e10 = metIx.evaluate(10), e40 = metIx.evaluate(40);
+  eq([e20.chunks, e10.chunks, e40.chunks, e20.embedder, e20.must_pass], [11, 17, 6, "fake-keyword-v1", ["q01", "q02"]]);
+  eq(e20.rows.map(row33), [[1, "0.750", "0.833", "0.833", "0.833"], [3, "1.000", "0.611", "0.917", "0.911"], [5, "1.000", "0.400", "0.917", "0.931"], [10, "1.000", "0.200", "0.917", "0.931"]]);
+  eq(e10.rows.map(row33)[1], [3, "0.917", "0.778", "1.000", "0.956"]);
+  eq(e40.rows.map(row33)[1], [3, "1.000", "0.444", "1.000", "0.978"]);
+  eq(e20.skipped.map((s) => s.id + " " + s.best.toFixed(3)), ["q07 0.927", "q08 0.447"]);
+  eq(e20.cases.filter((c) => c.recall < 1).map((c) => c.id), []);
+  eq(e10.cases.filter((c) => c.recall < 1).map((c) => c.id), ["q02"]);
+  eq(e20.cases.find((c) => c.id === "q06").first_rank, 2);
+});
+test("lesson 3.3 gate: the 10-word index fails on recall@3 and the 40-word index passes", () => {
+  const g10 = metIx.compare(metIx.evaluate(20), metIx.evaluate(10));
+  eq([g10.passed, g10.reasons, g10.fixed, g10.broken], [false, ["recall@3 went down: 1.000 -> 0.917"], [], []]);
+  const g40 = metIx.compare(metIx.evaluate(20), metIx.evaluate(40));
+  eq([g40.passed, g40.reasons, g40.fixed, g40.broken], [true, [], [], []]);
+  const base = metIx.evaluate(20), run = JSON.parse(JSON.stringify(base));
+  run.cases.find((c) => c.id === "q01").hit = false;
+  const gm = metIx.compare(base, run);
+  if (gm.passed || gm.reasons.length !== 1 || !gm.reasons[0].includes("q01")) throw new Error("must-pass miss not caught: " + JSON.stringify(gm));
+  eq(gm.broken, ["q01"]);
+});
+test("ticket T-019 converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
+  const md = A.md.ticket(A.tickets["T-019"]);
+  if (!md.startsWith("# T-019: ")) throw new Error("bad title line");
+  for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
+  if (/(^|[^\\])<[a-z]+[ >]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+});
+test("lesson 3.3 numbers: the T-019 Markdown holds the question lines and the numbers of the interactive", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-019.md"), "utf8");
+  metIx.QUESTIONS.forEach((q) => {
+    const line = JSON.stringify({ id: q.id, question: q.text, relevant: q.relevant, must_pass: q.must_pass }).replace(/":/g, '": ').replace(/,"/g, ', "');
+    if (!md.includes(line)) throw new Error("question line missing: " + q.id);
+  });
+  ["k = 1: 0.750, 0.833, 0.833, 0.833; k = 3: 1.000, 0.611, 0.917, 0.911; k = 5: 1.000, 0.400, 0.917, 0.931; k = 10: 1.000, 0.200, 0.917, 0.931",
+   "recall@3 went down: 1.000 -> 0.917", "q07 with the best score 0.927 and q08 with 0.447", "1.000, 0.444, 1.000, 0.978", "0.917, 0.778, 1.000, 0.956",
+   "DCG 3.131, IDCG 3.762 and nDCG 0.832", "nDCG@4 with the ideal gains 2, 1 is 0.643", 'short_hash(model + "\\n" + text)', "misses at k=3: q02 warranty-claims#how-to-claim"]
+    .forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+});
+test("lesson 3.3 content: the lesson table and the sample output use the rows of the interactive", () => {
+  const html = JSON.stringify(A.lessons["3.3"].levels);
+  const has = (s) => { if (!html.includes(JSON.stringify(s).slice(1, -1))) throw new Error("missing " + s); };
+  metIx.evaluate(20).rows.forEach((r) => {
+    const c = row33(r);
+    has("<tr><td>" + c[0] + "</td><td>" + c.slice(1).join("</td><td>") + "</td></tr>");
+    has((String(c[0]) + "   ").slice(0, 4) + c[1] + "   " + c[2] + "      " + c[3] + "  " + c[4]);
+  });
+  ["nDCG@3 = 3.131 / 3.762 = 0.832", "skipped (no relevant section): q07 best=0.927, q08 best=0.447", "embed_calls=0"].forEach(has);
+});
+test("lesson 3.3 wiring: index.html loads 19-retrieval-metrics.js and 19-ix.js, and 3.3 is ready with ticket T-019", () => {
+  const html = fs.readFileSync(path.join(base, "index.html"), "utf8");
+  ["content/lessons/19-retrieval-metrics.js", "content/lessons/19-ix.js"].forEach((s) => { if (!html.includes('src="' + s + '"')) throw new Error(s + " not loaded"); });
+  if (html.indexOf("19-ix.js") > html.indexOf('src="markdown.js"') || html.indexOf("19-retrieval-metrics.js") < html.indexOf("18-ix.js")) throw new Error("bad script order");
+  eq(A.lessons["3.3"].tickets, ["T-019"]);
+  eq([A.tickets["T-019"].lesson, A.tickets["T-019"].phase], ["3.3", 2]);
+  eq(A.curriculum.flatMap((t) => t.lessons).find((l) => l.id === "3.3").status, "ready");
+  if (!JSON.stringify(A.lessons["3.3"].levels).includes('"id":"l3-3-metrics"')) throw new Error("the interactive block is missing");
+});
+test("lesson 3.3 files never address a person by a title", () => {
+  ["19-retrieval-metrics.js", "19-ix.js"].forEach((f) => {
+    const s = fs.readFileSync(path.join(base, "content", "lessons", f), "utf8");
+    if (/captain/i.test(s)) throw new Error(f + " contains a direct address");
+  });
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
