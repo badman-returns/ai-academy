@@ -117,7 +117,17 @@ window.ACADEMY.curriculum = [
       { id: "t4-memory", text: "Memory: short-term (conversation) and long-term (stored facts).", source: "original" },
       { id: "t4-approval", text: "Human approval steps and guardrails for actions that change data.", source: "original" }
     ],
-    lessons: [], resources: [
+    lessons: [
+      { id: "4.1", title: "Tool calling: the full round trip", status: "planned", covers: ["t4-tools"] },
+      { id: "4.2", title: "The agent loop: think, act, observe", status: "planned", covers: ["t4-loop"] },
+      { id: "4.3", title: "Workflows: chaining, routing and parallel calls", status: "planned", covers: ["t4-workflows"] },
+      { id: "4.4", title: "Orchestrator, workers and evaluator", status: "planned", covers: ["t4-workflows"] },
+      { id: "4.5", title: "Agent memory: short-term and long-term", status: "planned", covers: ["t4-memory"] },
+      { id: "4.6", title: "Human approval and guardrails for actions", status: "planned", covers: ["t4-approval"] },
+      { id: "4.7", title: "MCP servers: tools, resources and prompts", status: "planned", covers: ["t4-mcp"] },
+      { id: "4.8", title: "MCP clients and transports", status: "planned", covers: ["t4-mcp"] }
+    ],
+    resources: [
       { title: "Building effective agents (read twice)", by: "Anthropic", url: "https://www.anthropic.com/engineering/building-effective-agents" },
       { title: "Model Context Protocol documentation", by: "MCP", url: "https://modelcontextprotocol.io/" },
       { title: "Agents Course", by: "Hugging Face", url: "https://huggingface.co/learn/agents-course" }
