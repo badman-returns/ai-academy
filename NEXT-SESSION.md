@@ -70,6 +70,8 @@ Read this file first. It tells you the state of the work and the tasks that rema
 - The topic 3 lesson plan (lessons 3.1 to 3.10) is in `curriculum.js`. All ten lessons are "planned". The user approved the plan on 2026-11-05.
 - The topic 4 lesson plan (lessons 4.1 to 4.8) is in `curriculum.js`. All eight lessons are "planned". The user approved the plan on 2026-11-05.
 - The topic 5 lesson plan (lessons 5.1 to 5.8) is in `curriculum.js`. All eight lessons are "planned". The user approved the plan on 2026-11-05.
+- The topic 6 lesson plan (lessons 6.1 to 6.6) is proposed in `curriculum.js`. All six lessons are "planned". The plan waits for the user's review.
+- The topic 7 lesson plan (lessons 7.1 to 7.6) is proposed in `curriculum.js`. All six lessons are "planned". The plan waits for the user's review.
 - Setup decisions for topics 3 to 5 (the user decided on 2026-11-05): local embedding model (for example fastembed) and a local cross-encoder reranker, no paid embedding API; pgvector in Docker Compose for 3.5; GitHub Actions for the 5.8 eval gate; a local trace store for 5.1, with Langfuse or LangSmith optional.
 
 ## Rules
