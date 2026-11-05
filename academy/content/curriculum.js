@@ -218,7 +218,21 @@ window.ACADEMY.curriculum = [
       { id: "t8-p6", text: "Cover: evals before release and monitoring after release.", source: "original" },
       { id: "t8-p7", text: "Cover: cost estimate (tokens per request × requests per day × price).", source: "original" }
     ],
-    lessons: [], resources: [
+    lessons: [
+      { id: "8.1", title: "The design method and the requirements", status: "planned", covers: ["t8-q1", "t8-p1"] },
+      { id: "8.2", title: "Data flow: the offline index and the online query path", status: "planned", covers: ["t8-q1", "t8-p2"] },
+      { id: "8.3", title: "Cost estimate: tokens, requests and price", status: "planned", covers: ["t8-q1", "t8-p7"] },
+      { id: "8.4", title: "Model choice, routing and provider fallback", status: "planned", covers: ["t8-q1", "t8-p3"] },
+      { id: "8.5", title: "Caching: prompt, semantic and result caches", status: "planned", covers: ["t8-q1", "t8-p4"] },
+      { id: "8.6", title: "Streaming to the user and time to first token", status: "planned", covers: ["t8-q1", "t8-p5"] },
+      { id: "8.7", title: "Evals before release, monitoring after release", status: "planned", covers: ["t8-q1", "t8-p6"] },
+      { id: "8.8", title: "The full design: the document chatbot in 45 minutes", status: "planned", covers: ["t8-q1"] },
+      { id: "8.9", title: "Practice: a support copilot with human handoff", status: "planned", covers: ["t8-q2"] },
+      { id: "8.10", title: "Practice: an agent that acts in other systems", status: "planned", covers: ["t8-q3"] },
+      { id: "8.11", title: "Practice: an eval and monitoring system", status: "planned", covers: ["t8-q4"] },
+      { id: "8.12", title: "Practice: 1 million users on a fixed LLM budget", status: "planned", covers: ["t8-q5"] }
+    ],
+    resources: [
       { title: "Building A Generative AI Platform", by: "Chip Huyen", url: "https://huyenchip.com/2024/07/25/genai-platform.html" },
       { title: "Book: AI Engineering (O'Reilly, 2025). No link: buy or borrow it.", by: "Chip Huyen", url: "" },
       { title: "General system design refresh", by: "ByteByteGo", url: "https://bytebytego.com/" }
