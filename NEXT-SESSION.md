@@ -63,13 +63,14 @@ Read this file first. It tells you the state of the work and the tasks that rema
 - The user's review of lesson 2.6 and ticket T-015 is pending.
 - The user's review of lesson 2.7 and ticket T-016 is pending.
 - Topic 2 is complete. All planned lessons (1.1 to 1.9 and 2.1 to 2.7) are "ready". No lesson is "planned".
-- The next work is the lesson plan for topic 3, "RAG (retrieval-augmented generation)". Topic 3 has no lessons in `curriculum.js` yet.
-  Its first lesson is the first lesson that is not "ready". Make the plan only when the user asks for it. The user approves the plan before the lessons are built.
+- The next work is lesson 3.1, the first lesson that is not "ready". Build a lesson only when the user asks for it.
 - The UI redesign is done (2026-11-02). The user's final review of it is pending. Report: `site-check/REDESIGN-REPORT.md`.
 - The topic 2 lesson plan (lessons 2.1 to 2.7) is in `curriculum.js`. All seven lessons are "ready". The user approved the plan on 2026-11-02.
 - FastAPI start: topic 3 (the user decided).
-- The topic 3 lesson plan (lessons 3.1 to 3.10, all "planned") is proposed in `curriculum.js` and waits for the user's review.
-- The topic 4 lesson plan (lessons 4.1 to 4.8, all "planned") is proposed in `curriculum.js`. It waits for the user's review.
+- The topic 3 lesson plan (lessons 3.1 to 3.10) is in `curriculum.js`. All ten lessons are "planned". The user approved the plan on 2026-11-05.
+- The topic 4 lesson plan (lessons 4.1 to 4.8) is in `curriculum.js`. All eight lessons are "planned". The user approved the plan on 2026-11-05.
+- The topic 5 lesson plan (lessons 5.1 to 5.8) is in `curriculum.js`. All eight lessons are "planned". The user approved the plan on 2026-11-05.
+- Setup decisions for topics 3 to 5 (the user decided on 2026-11-05): local embedding model (for example fastembed) and a local cross-encoder reranker, no paid embedding API; pgvector in Docker Compose for 3.5; GitHub Actions for the 5.8 eval gate; a local trace store for 5.1, with Langfuse or LangSmith optional.
 
 ## Rules
 
