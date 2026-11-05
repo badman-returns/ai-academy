@@ -90,7 +90,19 @@ window.ACADEMY.curriculum = [
       { id: "t3-metrics", text: "Retrieval metrics: recall@k, precision@k, MRR, nDCG.", source: "original" },
       { id: "t3-failures", text: "When RAG fails: bad chunks, wrong embedding model, stale index, missing metadata filters.", source: "original" }
     ],
-    lessons: [], resources: [
+    lessons: [
+      { id: "3.1", title: "The RAG pipeline: build the index", status: "planned", covers: ["t3-pipeline"] },
+      { id: "3.2", title: "Retrieve and answer with citations", status: "planned", covers: ["t3-pipeline"] },
+      { id: "3.3", title: "Retrieval metrics: recall@k, precision@k, MRR, nDCG", status: "planned", covers: ["t3-metrics"] },
+      { id: "3.4", title: "Chunking: size, sections and overlap", status: "planned", covers: ["t3-chunking"] },
+      { id: "3.5", title: "Vector search: pgvector, HNSW and IVF", status: "planned", covers: ["t3-vector"] },
+      { id: "3.6", title: "Hybrid search: BM25 and reciprocal rank fusion", status: "planned", covers: ["t3-hybrid"] },
+      { id: "3.7", title: "Reranking with a cross-encoder", status: "planned", covers: ["t3-rerank"] },
+      { id: "3.8", title: "Query rewriting and multi-query", status: "planned", covers: ["t3-query"] },
+      { id: "3.9", title: "Contextual retrieval", status: "planned", covers: ["t3-query"] },
+      { id: "3.10", title: "When RAG fails: find the cause and add guards", status: "planned", covers: ["t3-failures"] }
+    ],
+    resources: [
       { title: "Introducing Contextual Retrieval", by: "Anthropic", url: "https://www.anthropic.com/news/contextual-retrieval" },
       { title: "Vector Databases; Building and Evaluating Advanced RAG", by: "DeepLearning.AI", url: "https://www.deeplearning.ai/short-courses/" }
     ]
