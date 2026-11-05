@@ -142,13 +142,13 @@
 
 .cur-body { padding: 0 var(--sp-4) var(--sp-4) calc(var(--sp-4) + 14px + 36px + 2 * var(--sp-3)); border-top: 1px solid var(--border); }
 .cur-h { font-size: var(--fs-xs); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); margin: var(--sp-4) 0 var(--sp-2); }
-.cur-lessons { list-style: none; padding: 0; margin: 0; border: 1px solid var(--border); border-radius: var(--r-ctl); }
-.cur-lesson { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; margin: 0; padding: var(--sp-2) var(--sp-3); }
+.cur-lessons { list-style: none; padding: 0; margin: 0; border: 1px solid var(--border); border-radius: var(--r-ctl); display: grid; grid-template-columns: max-content minmax(0, 1fr) auto; }
+.cur-lesson { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; gap: var(--sp-3); align-items: center; margin: 0; padding: var(--sp-2) var(--sp-3); }
 .cur-lesson + .cur-lesson { border-top: 1px solid var(--border); }
 .cur-lesson.is-next { background: var(--accent-subtle); }
 .cur-lesson:first-child { border-radius: var(--r-ctl) var(--r-ctl) 0 0; }
 .cur-lesson:last-child { border-radius: 0 0 var(--r-ctl) var(--r-ctl); }
-.cur-lid { font-family: var(--mono); font-size: var(--fs-sm); color: var(--text-secondary); }
+.cur-lid { min-width: 34px; white-space: nowrap; font-family: var(--mono); font-size: var(--fs-sm); color: var(--text-secondary); }
 .cur-ltitle { display: flex; flex-direction: column; min-width: 0; font-size: var(--fs-sm); font-weight: 500; }
 .cur-ltitle a { overflow-wrap: anywhere; }
 .cur-lesson.is-planned .cur-ltitle > span { color: var(--text-secondary); }
@@ -180,7 +180,8 @@
   .cur-side { flex-direction: row; align-items: center; width: auto; margin-top: var(--sp-1); }
   .cur-side .progress { flex: 1; }
   .cur-body { padding: 0 var(--sp-3) var(--sp-3); }
-  .cur-lesson { grid-template-columns: 30px minmax(0, 1fr); }
+  .cur-lessons { grid-template-columns: max-content minmax(0, 1fr); }
+  .cur-lid { min-width: 30px; }
   .cur-ltag { grid-column: 2; justify-content: flex-start; }
 }
 
