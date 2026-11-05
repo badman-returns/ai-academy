@@ -1436,5 +1436,314 @@ test("lesson 2.7 files never address a person by a title", () => {
   });
 });
 
+/* Lesson 3.1: the index path interactive, the fixture hashes, the chunk counts and the lesson numbers */
+const pipe = (A.ix || {})["l3-1-pipeline"];
+const sha12b = (text) => require("crypto").createHash("sha256").update(text, "utf8").digest("hex").slice(0, 12);
+test("index toy: the interactive l3-1-pipeline is loaded with the fake embedder and the checked real model", () => {
+  if (typeof pipe !== "function" || pipe.mount !== pipe) throw new Error("l3-1-pipeline is not loaded");
+  eq(pipe.EMBEDDER, { model: "fake-keyword-v1", dim: 6 });
+  eq(pipe.REAL, { model: "BAAI/bge-small-en-v1.5", dim: 384, maxTokens: 512 });
+  eq(pipe.SIZES, [10, 20, 40, 80]);
+  eq(pipe.DEFAULT_SIZE, 20);
+});
+test("index toy: the corpus is in sorted path order and every stored hash is SHA-256 of the file text plus one newline", () => {
+  const paths = pipe.CORPUS.map((d) => d.path);
+  eq(paths, paths.slice().sort());
+  pipe.CORPUS.forEach((d) => eq(pipe.HASHES[d.path], sha12b(d.text + "\n"), d.path));
+  const refund = pipe.CORPUS.find((d) => d.path === "customer/refund-policy.md");
+  eq(sha12b(refund.text.replace("45 days", "30 days") + "\n"), "28945264e281", "edited refund policy");
+});
+test("index toy: the parse gives 10 sections and 152 words, and the refund policy has 30 and 19 words", () => {
+  const docs = pipe.CORPUS.map(pipe.parse);
+  eq(docs.reduce((n, d) => n + d.sections.length, 0), 10);
+  eq(docs.reduce((n, d) => n + d.words, 0), 152);
+  const r = docs.find((d) => d.id === "refund-policy");
+  eq(r.title, "Refund policy");
+  eq(r.sections.map((s) => [s.id, s.words.length]), [["refund-policy#return-window", 30], ["refund-policy#damaged-items", 19]]);
+});
+test("index toy: the sizes 10, 20, 40 and 80 give 17, 11, 6 and 5 chunks with the longest 10, 20, 40 and 49 words", () => {
+  eq(pipe.SIZES.map((s) => { const ix = pipe.buildIndex(s); return [ix.chunks.length, ix.crossing.length, ix.longest]; }),
+    [[17, 4, 10], [11, 5, 20], [6, 5, 40], [5, 5, 49]]);
+  pipe.SIZES.forEach((s) => pipe.buildIndex(s).chunks.forEach((c) => { if (c.id.split(":")[0] + ".md" !== c.doc.split("/").pop()) throw new Error(c.id + " crosses a document"); }));
+});
+test("index toy: at 20 words five chunks mix two sections, and refund-policy:1 keeps both sections in text order", () => {
+  const ix = pipe.buildIndex(20);
+  eq(ix.crossing, ["delivery-times:0", "refund-policy:1", "warranty-claims:0", "travel-expenses:0", "vpn-setup:0"]);
+  eq(ix.chunks.find((c) => c.id === "refund-policy:1").sections, ["refund-policy#return-window", "refund-policy#damaged-items"]);
+  eq(ix.chunks[0].id, "delivery-times:0");
+});
+test("index toy: the measurement line and the manifest of the fake run at 20 words", () => {
+  const ix = pipe.buildIndex(20);
+  eq(ix.line, "ingest docs=5 sections=10 chunks=11 words=152 chunk_words=20 embedder=fake-keyword-v1 dim=6 cost_usd=0");
+  eq(Object.keys(ix.manifest), ["embedder", "chunker", "documents", "chunks"]);
+  eq(ix.manifest.chunker, { kind: "fixed-words", chunk_words: 20 });
+  eq(Object.values(ix.manifest.documents).map((d) => d.chunks), [2, 3, 2, 2, 2]);
+  if (/20\d\d-\d\d-\d\d|"(date|time|built\w*|created\w*)":/i.test(JSON.stringify(ix.manifest))) throw new Error("the manifest has a date or a time");
+});
+test("index toy: the fake vector of refund-policy:0 is (0.913, 0.183, 0.365, 0, 0, 0) and every vector has length 1", () => {
+  const ix = pipe.buildIndex(20);
+  const c = ix.chunks.find((x) => x.id === "refund-policy:0");
+  eq(c.counts, [5, 1, 2, 0, 0, 0]);
+  eq(c.vector.map(r3), [0.913, 0.183, 0.365, 0, 0, 0]);
+  eq(ix.chunks[0].vector.map(r3), [0.11, 0, 0.994, 0, 0, 0]);
+  pipe.SIZES.forEach((s) => pipe.buildIndex(s).chunks.forEach((x) => near(Math.sqrt(pipe.dot(x.vector, x.vector)), 1, 1e-9, x.id)));
+});
+test("index toy: the probe ranks refund-policy:0 0.969, refund-policy:1 0.937 and refund-policy:2 0.577 at 20 words", () => {
+  eq(pipe.PROBE, "How many days do I have to return an unused tool?");
+  const top = pipe.search(pipe.buildIndex(20), pipe.PROBE, 3);
+  eq(top.map((h) => [h.chunk.id, r3(h.score)]), [["refund-policy:0", 0.969], ["refund-policy:1", 0.937], ["refund-policy:2", 0.577]]);
+  near(top[0].score, 13 / Math.sqrt(180), 1e-12);
+  near(top[1].score, 10 / Math.sqrt(114), 1e-12);
+  eq([10, 40, 80].map((s) => r3(pipe.search(pipe.buildIndex(s), pipe.PROBE, 1)[0].score)), [1, 0.995, 0.996]);
+});
+test("index toy: a text with no listed word raises the zero-vector error", () => {
+  let msg = "";
+  try { pipe.embed("Call 555-0100 for printer help."); } catch (e) { msg = e.message; }
+  if (!/zero vector/.test(msg)) throw new Error("no zero-vector error");
+});
+test("ticket T-017 converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
+  const md = A.md.ticket(A.tickets["T-017"]);
+  if (!md.startsWith("# T-017: ")) throw new Error("bad title line");
+  for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
+  if (/(^|[^\\])<[a-z]+[ >]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+});
+test("lesson 3.1 numbers: the T-017 Markdown holds the fixture files, the word lists, the hashes and the line of the interactive", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-017.md"), "utf8");
+  pipe.CORPUS.forEach((d) => { if (!md.includes("--- docs/" + d.path + " ---\n" + d.text + "\n")) throw new Error("the fixture text differs: " + d.path); });
+  Object.keys(pipe.WORDS).forEach((k) => {
+    const row = md.split("\n").find((l) => l.startsWith(k + ":"));
+    if (!row) throw new Error("word list missing: " + k);
+    eq(row.slice(k.length + 1).trim().split(/\s+/), pipe.WORDS[k], k);
+  });
+  eq(pipe.DIMS, Object.keys(pipe.WORDS));
+  const ix = pipe.buildIndex(20);
+  [ix.line, "28945264e281", "0.969", "0.937", "0.577", "17, 11, 6 and 5", "10, 20, 40 and 49", "BAAI/bge-small-en-v1.5", "384"]
+    .concat(Object.values(pipe.HASHES)).forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+});
+test("lesson 3.1 content: the lesson table and the worked example use the numbers of the interactive", () => {
+  const html = JSON.stringify(A.lessons["3.1"].levels);
+  pipe.SIZES.forEach((s) => {
+    const ix = pipe.buildIndex(s), top = pipe.search(ix, pipe.PROBE, 1)[0];
+    const row = "<tr><td>" + s + " words</td><td>" + ix.chunks.length + "</td><td>" + ix.crossing.length + "</td><td>" + ix.longest + " words</td><td>" + top.chunk.id + ", " + top.score.toFixed(3) + "</td></tr>";
+    if (!html.includes(JSON.stringify(row).slice(1, -1))) throw new Error("table row differs for " + s);
+  });
+  [pipe.buildIndex(20).line, "13 / √180 = <strong>0.969</strong>", "10 / √114 = 0.937", "f99d434e4406", "28945264e281"]
+    .forEach((s) => { if (!html.includes(JSON.stringify(s).slice(1, -1))) throw new Error("missing " + s); });
+});
+test("lesson 3.1 wiring: index.html loads 17-rag-index.js and 17-ix.js, and 3.1 is ready with ticket T-017", () => {
+  const html = fs.readFileSync(path.join(base, "index.html"), "utf8");
+  ["content/lessons/17-rag-index.js", "content/lessons/17-ix.js"].forEach((s) => { if (!html.includes('src="' + s + '"')) throw new Error(s + " not loaded"); });
+  eq(A.lessons["3.1"].tickets, ["T-017"]);
+  eq([A.tickets["T-017"].lesson, A.tickets["T-017"].phase], ["3.1", 2]);
+  eq(A.curriculum.flatMap((t) => t.lessons).find((l) => l.id === "3.1").status, "ready");
+  if (!JSON.stringify(A.lessons["3.1"].levels).includes('"id":"l3-1-pipeline"')) throw new Error("the interactive block is missing");
+});
+test("lesson 3.1 files never address a person by a title", () => {
+  ["17-rag-index.js", "17-ix.js"].forEach((f) => {
+    const s = fs.readFileSync(path.join(base, "content", "lessons", f), "utf8");
+    if (/captain/i.test(s)) throw new Error(f + " contains a direct address");
+  });
+});
+
+const askIx = (A.ix || {})["l3-2-ask"];
+const ask32 = (q, k, min) => askIx.compute({ q: q, k: k === undefined ? 3 : k, min: min === undefined ? 0.5 : min });
+const src32 = (r) => r.sources.map((s) => s.id + " " + s.score.toFixed(3));
+test("ask toy: the interactive l3-2-ask is loaded with the prompt rag-answer-v1 and the T-008 defaults", () => {
+  if (typeof askIx !== "function" || askIx.mount !== askIx) throw new Error("l3-2-ask is not loaded");
+  eq([askIx.PROMPT, askIx.KS, askIx.MINS, askIx.DEFAULT, askIx.IDK], ["rag-answer-v1", [1, 2, 3, 4, 5], [0.3, 0.5, 0.7], { q: "refund-window", k: 3, min: 0.5 }, "I don't know"]);
+  eq(askIx.QUESTIONS.map((q) => q.id), ["refund-window", "damaged", "express", "return-delivery", "vacation-days"]);
+  eq(askIx.QUESTIONS[0].text, pipe.PROBE);
+});
+test("lesson 3.2 numbers: the five questions give answered, answered, unsupported, abstained and no_sources at k = 3 and minimum 0.5", () => {
+  const want = {
+    "refund-window": ["answered", ["refund-policy:0 0.969", "refund-policy:1 0.937", "refund-policy:2 0.577"]],
+    "damaged": ["answered", ["refund-policy:2 0.949", "warranty-claims:0 0.894", "warranty-claims:1 0.800"]],
+    "express": ["unsupported", ["delivery-times:1 1.000", "delivery-times:0 0.994", "warranty-claims:1 0.894"]],
+    "return-delivery": ["abstained", ["refund-policy:1 0.927", "refund-policy:0 0.843", "refund-policy:2 0.816"]],
+    "vacation-days": ["no_sources", []]
+  };
+  Object.keys(want).forEach((q) => { const r = ask32(q); eq([r.status, src32(r)], want[q], q); });
+  const v = ask32("vacation-days");
+  eq([v.called, v.answer, v.ranked[0].score.toFixed(3)], [false, "I don't know", "0.447"]);
+  eq(ask32("damaged").answer, "We send a new tool at no cost [refund-policy:2].");
+  eq(ask32("express").answer, "Express delivery takes 1 working day [delivery-times:0]. Express delivery costs 9 euros [delivery-times:2].");
+  eq(ask32("return-delivery").answer, "I don't know.");
+});
+test("lesson 3.2 numbers: k and the minimum change the result as the lesson says", () => {
+  const d4 = ask32("damaged", 4);
+  eq([d4.status, src32(d4)[3], d4.answer], ["answered", "refund-policy:1 0.718", "Send a photo within 7 days [refund-policy:1]. We send a new tool at no cost [refund-policy:2]."]);
+  eq(d4.citations.find((c) => c.id === "refund-policy:1").sections, ["refund-policy#return-window", "refund-policy#damaged-items"]);
+  const e1 = ask32("express", 1);
+  eq([e1.status, src32(e1), e1.sources[0].text, e1.answer], ["unsupported", ["delivery-times:1 1.000"], "the next working day.", "Express delivery costs 9 euros [delivery-times:2]."]);
+  const v3 = ask32("vacation-days", 3, 0.3);
+  eq([v3.status, src32(v3)], ["abstained", ["delivery-times:1 0.447", "delivery-times:0 0.444", "warranty-claims:1 0.400"]]);
+  const r7 = ask32("refund-window", 3, 0.7);
+  eq([r7.status, r7.sources.length], ["answered", 2]);
+});
+test("lesson 3.2 numbers: citations carry the document path and the sections, and an invented id has doc null", () => {
+  eq(ask32("refund-window").response.citations, [{ id: "refund-policy:0", doc: "customer/refund-policy.md", sections: ["refund-policy#return-window"] }]);
+  eq(ask32("express").response.citations, [
+    { id: "delivery-times:0", doc: "customer/delivery-times.md", sections: ["delivery-times#standard-delivery", "delivery-times#express-delivery"] },
+    { id: "delivery-times:2", doc: null, sections: [] }]);
+  eq(ask32("express").response.sources, [{ id: "delivery-times:1", score: 1 }, { id: "delivery-times:0", score: 0.994 }, { id: "warranty-claims:1", score: 0.894 }]);
+  eq(pipe.buildIndex(20).chunks.filter((c) => c.id.startsWith("delivery-times:")).map((c) => c.id), ["delivery-times:0", "delivery-times:1"]);
+});
+test("lesson 3.2 numbers: GET /health and the prompt follow the T-008 format with rag-answer-v1", () => {
+  const r = ask32("refund-window");
+  eq(r.health, { status: "ok", embedder: "fake-keyword-v1", dim: 6, chunks: 11, prompt: "rag-answer-v1" });
+  eq(r.system, askIx.SYSTEM_LINES.join("\n"));
+  if (!/^<source id="refund-policy:0">\n[\s\S]*<\/source>\n[\s\S]*\nQuestion: How many days/.test(r.user)) throw new Error("bad user message: " + r.user);
+  eq(ask32("express").system, r.system);
+});
+test("lesson 3.2 citations: the pattern accepts chunk ids and document ids, in order, with no duplicates", () => {
+  eq(askIx.parseCitations("A [refund-policy:0]. B [refund-policy]. C [refund-policy:0]. D [Bad:x]."), ["refund-policy:0", "refund-policy"]);
+  eq(askIx.parseCitations("I don't know."), []);
+});
+test("ticket T-018 converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
+  const md = A.md.ticket(A.tickets["T-018"]);
+  if (!md.startsWith("# T-018: ")) throw new Error("bad title line");
+  for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
+  if (/(^|[^\\])<[a-z]+[ >]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+});
+test("lesson 3.2 numbers: the T-018 Markdown holds the fake replies, the health JSON and the numbers of the interactive", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-018.md"), "utf8");
+  askIx.QUESTIONS.forEach((q) => { if (!md.includes(q.text)) throw new Error("question missing: " + q.id); });
+  ["damaged", "express", "return-delivery", "refund-window"].forEach((q) => { const a = ask32(q).answer; if (!md.includes('"' + a + '"')) throw new Error("reply missing: " + q); });
+  ['{"status": "ok", "embedder": "fake-keyword-v1", "dim": 6, "chunks": 11, "prompt": "rag-answer-v1"}', "0.969", "0.937", "0.577", "0.447", "0.444", "0.400",
+   "0.927", "0.843", "0.816", "0.949", "0.894", "0.800", "0.718", "0.994", "\\[([a-z0-9-]+(?::[0-9]+)?)\\]", "version: rag-answer-v1", "$0.0003"]
+    .forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+  near(5 * (300 * 0.10 + 50 * 0.50) / 1e6, 0.000275, 1e-12, "milestone 4 cost");
+});
+test("lesson 3.2 content: the lesson table and the prompt file use the numbers and the rules of the interactive", () => {
+  const html = JSON.stringify(A.lessons["3.2"].levels);
+  const has = (s) => { if (!html.includes(JSON.stringify(s).slice(1, -1))) throw new Error("missing " + s); };
+  askIx.QUESTIONS.forEach((q) => {
+    const r = ask32(q.id);
+    const cell = r.sources.length ? src32(r).join(", ") : "none: the best score is " + r.ranked[0].score.toFixed(3);
+    has("<tr><td>" + q.label + "</td><td>" + cell + "</td>");
+  });
+  has("version: rag-answer-v1\n\n" + askIx.SYSTEM_LINES.join("\n"));
+  ["refund-policy:1</code>, which has rank 4 with 0.718", "Express delivery costs 9 euros [delivery-times:2].", "\"the next working day.\""].forEach(has);
+});
+test("lesson 3.2 wiring: index.html loads 18-rag-ask.js and 18-ix.js, and 3.2 is ready with ticket T-018", () => {
+  const html = fs.readFileSync(path.join(base, "index.html"), "utf8");
+  ["content/lessons/18-rag-ask.js", "content/lessons/18-ix.js"].forEach((s) => { if (!html.includes('src="' + s + '"')) throw new Error(s + " not loaded"); });
+  if (html.indexOf("18-ix.js") > html.indexOf('src="markdown.js"') || html.indexOf("18-rag-ask.js") < html.indexOf("17-ix.js")) throw new Error("bad script order");
+  eq(A.lessons["3.2"].tickets, ["T-018"]);
+  eq([A.tickets["T-018"].lesson, A.tickets["T-018"].phase], ["3.2", 2]);
+  eq(A.curriculum.flatMap((t) => t.lessons).find((l) => l.id === "3.2").status, "ready");
+  if (!JSON.stringify(A.lessons["3.2"].levels).includes('"id":"l3-2-ask"')) throw new Error("the interactive block is missing");
+});
+test("lesson 3.2 files never address a person by a title", () => {
+  ["18-rag-ask.js", "18-ix.js"].forEach((f) => {
+    const s = fs.readFileSync(path.join(base, "content", "lessons", f), "utf8");
+    if (/captain/i.test(s)) throw new Error(f + " contains a direct address");
+  });
+});
+
+const metIx = (A.ix || {})["l3-3-metrics"];
+const f3 = (x) => x.toFixed(3);
+const row33 = (r) => [r.k, f3(r.recall), f3(r.precision), f3(r.mrr), f3(r.ndcg)];
+const q33 = (id) => metIx.QUESTIONS.find((q) => q.id === id);
+test("metrics toy: the interactive l3-3-metrics is loaded with 8 questions, the k values and the gate k of 3", () => {
+  if (typeof metIx !== "function" || metIx.mount !== metIx) throw new Error("l3-3-metrics is not loaded");
+  eq([metIx.KS, metIx.GATE_K, metIx.SIZE, metIx.CANDIDATES, metIx.DEFAULT], [[1, 3, 5, 10], 3, 20, [10, 40], { q: "q02", k: 3, cand: 10 }]);
+  eq(metIx.QUESTIONS.map((q) => q.id), ["q01", "q02", "q03", "q04", "q05", "q06", "q07", "q08"]);
+  eq(metIx.QUESTIONS.filter((q) => q.must_pass).map((q) => q.id), ["q01", "q02"]);
+  eq(metIx.sections().length, 10);
+  metIx.QUESTIONS.forEach((q) => Object.keys(q.relevant).forEach((s) => { if (!metIx.sections().includes(s)) throw new Error(q.id + " labels an unknown section " + s); }));
+});
+test("lesson 3.3 numbers: the hand case gives 0.500, 0.500, 0.500 and nDCG@4 0.643, and no labels is an error", () => {
+  const R = [["a"], ["b"], ["c"], ["d"]], L = { b: 2, d: 1 };
+  eq([metIx.recallAtK(R, L, 2), metIx.precisionAtK(R, L, 2), metIx.reciprocalRank(R, L, 4)], [0.5, 0.5, 0.5]);
+  eq(f3(metIx.ndcgAtK([0, 2, 0, 1], [2, 1, 0, 0], 4)), "0.643");
+  eq([f3(metIx.dcg([0, 2, 0, 1], 4)), f3(metIx.dcg([2, 1, 0, 0], 4))], ["1.693", "2.631"]);
+  let threw = false; try { metIx.recallAtK(R, {}, 2); } catch (e) { threw = true; }
+  if (!threw) throw new Error("recallAtK must throw with no labels");
+  eq(f3(metIx.dcg([2, 1, 1], 3) / metIx.dcg([2, 1], 3)), "1.190");
+});
+test("lesson 3.3 numbers: q02 at k = 3 has recall, precision and RR 1.000 and nDCG 0.832 (3.131 / 3.762)", () => {
+  const q = q33("q02"), d = metIx.detail(q, q.relevant, 3);
+  eq(d.results.slice(0, 5).map((r) => r.id + " " + r.gain), ["refund-policy:2 2", "warranty-claims:0 1", "warranty-claims:1 1", "refund-policy:1 2", "delivery-times:1 0"]);
+  eq(d.ideal.slice(0, 5), [2, 2, 1, 1, 0]);
+  eq([d.recall, d.precision, d.rr, f3(d.ndcg)], [1, 1, 1, "0.832"]);
+  eq([f3(d.dcgTerms.reduce((a, b) => a + b, 0)), f3(d.idcgTerms.reduce((a, b) => a + b, 0))], ["3.131", "3.762"]);
+  eq(metIx.detail(q, q.relevant, 1).recall, 0.5);
+  [1, 3, 5, 10].forEach((k) => { if (metIx.detail(q, q.relevant, k).ndcg > 1) throw new Error("nDCG above 1 at k = " + k); });
+  eq(f3(metIx.detail(q, { "refund-policy#damaged-items": 2, "warranty-claims#how-to-claim": 2 }, 3).ndcg), "1.000");
+});
+test("lesson 3.3 numbers: q06 starts with the fragment, so RR is 0 at k = 1 and 0.500 at k = 3; q01 counts one section once", () => {
+  const q = q33("q06"), d1 = metIx.detail(q, q.relevant, 1), d3 = metIx.detail(q, q.relevant, 3);
+  eq([d1.results[0].id, d1.results[0].score.toFixed(3)], ["travel-expenses:1", "1.000"]);
+  eq([d1.recall, d1.precision, d1.rr, d1.ndcg], [0, 0, 0, 0]);
+  eq([d3.recall, f3(d3.precision), d3.rr, f3(d3.ndcg)], [1, "0.333", 0.5, "0.631"]);
+  const p = q33("q01"), d = metIx.detail(p, p.relevant, 3);
+  eq([d.recall, f3(d.precision), f3(d.ndcg)], [1, "0.667", "1.000"]);
+});
+test("lesson 3.3 numbers: the eval rows at 20, 10 and 40 words and the skipped questions", () => {
+  const e20 = metIx.evaluate(20), e10 = metIx.evaluate(10), e40 = metIx.evaluate(40);
+  eq([e20.chunks, e10.chunks, e40.chunks, e20.embedder, e20.must_pass], [11, 17, 6, "fake-keyword-v1", ["q01", "q02"]]);
+  eq(e20.rows.map(row33), [[1, "0.750", "0.833", "0.833", "0.833"], [3, "1.000", "0.611", "0.917", "0.911"], [5, "1.000", "0.400", "0.917", "0.931"], [10, "1.000", "0.200", "0.917", "0.931"]]);
+  eq(e10.rows.map(row33)[1], [3, "0.917", "0.778", "1.000", "0.956"]);
+  eq(e40.rows.map(row33)[1], [3, "1.000", "0.444", "1.000", "0.978"]);
+  eq(e20.skipped.map((s) => s.id + " " + s.best.toFixed(3)), ["q07 0.927", "q08 0.447"]);
+  eq(e20.cases.filter((c) => c.recall < 1).map((c) => c.id), []);
+  eq(e10.cases.filter((c) => c.recall < 1).map((c) => c.id), ["q02"]);
+  eq(e20.cases.find((c) => c.id === "q06").first_rank, 2);
+});
+test("lesson 3.3 gate: the 10-word index fails on recall@3 and the 40-word index passes", () => {
+  const g10 = metIx.compare(metIx.evaluate(20), metIx.evaluate(10));
+  eq([g10.passed, g10.reasons, g10.fixed, g10.broken], [false, ["recall@3 went down: 1.000 -> 0.917"], [], []]);
+  const g40 = metIx.compare(metIx.evaluate(20), metIx.evaluate(40));
+  eq([g40.passed, g40.reasons, g40.fixed, g40.broken], [true, [], [], []]);
+  const base = metIx.evaluate(20), run = JSON.parse(JSON.stringify(base));
+  run.cases.find((c) => c.id === "q01").hit = false;
+  const gm = metIx.compare(base, run);
+  if (gm.passed || gm.reasons.length !== 1 || !gm.reasons[0].includes("q01")) throw new Error("must-pass miss not caught: " + JSON.stringify(gm));
+  eq(gm.broken, ["q01"]);
+});
+test("ticket T-019 converts to Markdown with the title, sections 2 to 12 and no HTML outside code", () => {
+  const md = A.md.ticket(A.tickets["T-019"]);
+  if (!md.startsWith("# T-019: ")) throw new Error("bad title line");
+  for (let i = 2; i <= 12; i++) if (!new RegExp("^## " + i + "\\. ", "m").test(md)) throw new Error("section " + i + " missing");
+  if (/(^|[^\\])<[a-z]+[ >]/im.test(md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, ""))) throw new Error("HTML tags left outside code");
+});
+test("lesson 3.3 numbers: the T-019 Markdown holds the question lines and the numbers of the interactive", () => {
+  const md = fs.readFileSync(path.join(base, "..", "project", "tickets", "T-019.md"), "utf8");
+  metIx.QUESTIONS.forEach((q) => {
+    const line = JSON.stringify({ id: q.id, question: q.text, relevant: q.relevant, must_pass: q.must_pass }).replace(/":/g, '": ').replace(/,"/g, ', "');
+    if (!md.includes(line)) throw new Error("question line missing: " + q.id);
+  });
+  ["k = 1: 0.750, 0.833, 0.833, 0.833; k = 3: 1.000, 0.611, 0.917, 0.911; k = 5: 1.000, 0.400, 0.917, 0.931; k = 10: 1.000, 0.200, 0.917, 0.931",
+   "recall@3 went down: 1.000 -> 0.917", "q07 with the best score 0.927 and q08 with 0.447", "1.000, 0.444, 1.000, 0.978", "0.917, 0.778, 1.000, 0.956",
+   "DCG 3.131, IDCG 3.762 and nDCG 0.832", "nDCG@4 with the ideal gains 2, 1 is 0.643", 'short_hash(model + "\\n" + text)', "misses at k=3: q02 warranty-claims#how-to-claim"]
+    .forEach((s) => { if (!md.includes(s)) throw new Error("missing " + s); });
+});
+test("lesson 3.3 content: the lesson table and the sample output use the rows of the interactive", () => {
+  const html = JSON.stringify(A.lessons["3.3"].levels);
+  const has = (s) => { if (!html.includes(JSON.stringify(s).slice(1, -1))) throw new Error("missing " + s); };
+  metIx.evaluate(20).rows.forEach((r) => {
+    const c = row33(r);
+    has("<tr><td>" + c[0] + "</td><td>" + c.slice(1).join("</td><td>") + "</td></tr>");
+    has((String(c[0]) + "   ").slice(0, 4) + c[1] + "   " + c[2] + "      " + c[3] + "  " + c[4]);
+  });
+  ["nDCG@3 = 3.131 / 3.762 = 0.832", "skipped (no relevant section): q07 best=0.927, q08 best=0.447", "embed_calls=0"].forEach(has);
+});
+test("lesson 3.3 wiring: index.html loads 19-retrieval-metrics.js and 19-ix.js, and 3.3 is ready with ticket T-019", () => {
+  const html = fs.readFileSync(path.join(base, "index.html"), "utf8");
+  ["content/lessons/19-retrieval-metrics.js", "content/lessons/19-ix.js"].forEach((s) => { if (!html.includes('src="' + s + '"')) throw new Error(s + " not loaded"); });
+  if (html.indexOf("19-ix.js") > html.indexOf('src="markdown.js"') || html.indexOf("19-retrieval-metrics.js") < html.indexOf("18-ix.js")) throw new Error("bad script order");
+  eq(A.lessons["3.3"].tickets, ["T-019"]);
+  eq([A.tickets["T-019"].lesson, A.tickets["T-019"].phase], ["3.3", 2]);
+  eq(A.curriculum.flatMap((t) => t.lessons).find((l) => l.id === "3.3").status, "ready");
+  if (!JSON.stringify(A.lessons["3.3"].levels).includes('"id":"l3-3-metrics"')) throw new Error("the interactive block is missing");
+});
+test("lesson 3.3 files never address a person by a title", () => {
+  ["19-retrieval-metrics.js", "19-ix.js"].forEach((f) => {
+    const s = fs.readFileSync(path.join(base, "content", "lessons", f), "utf8");
+    if (/captain/i.test(s)) throw new Error(f + " contains a direct address");
+  });
+});
+
 console.log("\n" + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

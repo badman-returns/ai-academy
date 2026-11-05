@@ -22,6 +22,9 @@ Exported from the academy on 2026-11-02.
 | 2.5 | Tool schemas and schema-enforced output | 1 of 3 | no |
 | 2.6 | Prompt caching | 1 of 3 | no |
 | 2.7 | Prompt versioning and prompt tests | 1 of 3 | no |
+| 3.1 | The RAG pipeline: build the index | 1 of 3 | no |
+| 3.2 | Retrieve and answer with citations | 1 of 3 | no |
+| 3.3 | Retrieval metrics: recall@k, precision@k, MRR, nDCG | 1 of 3 | no |
 
 ## Mastery
 
@@ -137,6 +140,25 @@ Exported from the academy on 2026-11-02.
 | The regression gate: not worse in total, and no must-pass case broken | 0 (Not started) |  |
 | Small sample sets are noisy: read the changed cases, not only the totals | 0 (Not started) |  |
 | Stable prompt bytes: no date and no request data in the fixed part | 0 (Not started) |  |
+| RAG has two halves: the index path runs before any question, the query path runs for each question | 0 (Not started) |  |
+| Parse keeps the structure: the title and the sections of each document | 0 (Not started) |  |
+| Fixed-size chunks: the size decides what one chunk can hold | 0 (Not started) |  |
+| The Embedder interface: a fake for the tests, one local model for real runs | 0 (Not started) |  |
+| The chunk record: id, document, title, sections, text and vector | 0 (Not started) |  |
+| The manifest: the model, the dimension, the chunker and a content hash for each document | 0 (Not started) |  |
+| The questions must use the same model as the index | 0 (Not started) |  |
+| The query path: embed the question with the same model, rank, filter by k and a minimum score | 0 (Not started) |  |
+| The grounded prompt: a versioned system prompt, the chunks in source tags, then the question | 0 (Not started) |  |
+| The citation check in code and the four statuses of T-008 | 0 (Not started) |  |
+| A citation names the chunk id, the document path and the sections | 0 (Not started) |  |
+| One FastAPI service that loads the index one time and refuses a different embedder | 0 (Not started) |  |
+| Supported is not complete: a citation check does not find a missing fact | 0 (Not started) |  |
+| A labeled question set: the relevant sections of each question, with a grade | 0 (Not started) |  |
+| recall@k and precision@k: what the top k found, and how much of it is useful | 0 (Not started) |  |
+| MRR: how high the first relevant result is | 0 (Not started) |  |
+| nDCG: graded relevance with a discount for each lower rank | 0 (Not started) |  |
+| The eval script: one retrieval function, one row for each k, a cache of query vectors | 0 (Not started) |  |
+| A retrieval baseline and a gate in the T-016 pattern | 0 (Not started) |  |
 
 ## Tickets
 
@@ -158,6 +180,9 @@ Exported from the academy on 2026-11-02.
 | T-014 | not started |  |  |
 | T-015 | not started |  |  |
 | T-016 | not started |  |  |
+| T-017 | not started |  |  |
+| T-018 | not started |  |  |
+| T-019 | not started |  |  |
 
 ## Review
 
