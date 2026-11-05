@@ -169,7 +169,15 @@ window.ACADEMY.curriculum = [
       { id: "t6-serving", text: "Serving: vLLM, batching, quantization (8-bit and 4-bit).", source: "original" },
       { id: "t6-routing", text: "Model routing: send easy tasks to a small model.", source: "original" }
     ],
-    lessons: [], resources: [
+    lessons: [
+      { id: "6.1", title: "Prompting, RAG or fine-tuning: match the fix to the failure", status: "planned", covers: ["t6-when"] },
+      { id: "6.2", title: "Open models and API models: cost, privacy and quality", status: "planned", covers: ["t6-open"] },
+      { id: "6.3", title: "Model routing: send easy requests to a small model", status: "planned", covers: ["t6-routing"] },
+      { id: "6.4", title: "Distillation: a large model teaches a small model", status: "planned", covers: ["t6-distill"] },
+      { id: "6.5", title: "LoRA and QLoRA: train a small number of weights", status: "planned", covers: ["t6-lora"] },
+      { id: "6.6", title: "Serving open models: batching and quantization", status: "planned", covers: ["t6-serving"] }
+    ],
+    resources: [
       { title: "Finetuning Large Language Models", by: "DeepLearning.AI", url: "https://www.deeplearning.ai/short-courses/" },
       { title: "LLM Course (fine-tuning chapters)", by: "Hugging Face", url: "https://huggingface.co/learn/llm-course" }
     ]
@@ -181,7 +189,15 @@ window.ACADEMY.curriculum = [
       { id: "t7-leaks", text: "Data leaks: PII in prompts and logs, tenant isolation in RAG.", source: "original" },
       { id: "t7-output", text: "Output checks: schema validation, allow-lists for tool actions, content filters.", source: "original" }
     ],
-    lessons: [], resources: [
+    lessons: [
+      { id: "7.1", title: "Prompt injection: attack your own assistant", status: "planned", covers: ["t7-injection"] },
+      { id: "7.2", title: "Defend against injection: keep data apart from instructions", status: "planned", covers: ["t7-injection"] },
+      { id: "7.3", title: "Allow-lists for tool actions", status: "planned", covers: ["t7-output"] },
+      { id: "7.4", title: "Output checks: schema, links and content filters", status: "planned", covers: ["t7-output"] },
+      { id: "7.5", title: "PII in prompts and logs", status: "planned", covers: ["t7-leaks"] },
+      { id: "7.6", title: "Tenant isolation in retrieval", status: "planned", covers: ["t7-leaks"] }
+    ],
+    resources: [
       { title: "Prompt injection series", by: "Simon Willison", url: "https://simonwillison.net/series/prompt-injection/" }
     ]
   },
